@@ -38,84 +38,42 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 
-// Temporary game data - would be fetched from API in real app
-const MOCK_GAMES = [
-  {
-    id: 1,
-    title: 'Cyber Adventure 2077',
-    price: 59.99,
-    discountPrice: 49.99,
-    rating: 4.5,
-    images: [
-      'https://via.placeholder.com/800x450?text=Cyber+Adventure+Screenshot+1',
-      'https://via.placeholder.com/800x450?text=Cyber+Adventure+Screenshot+2',
-      'https://via.placeholder.com/800x450?text=Cyber+Adventure+Screenshot+3',
-      'https://via.placeholder.com/800x450?text=Cyber+Adventure+Screenshot+4'
-    ],
-    category: 'action',
-    publisher: 'Game Studio X',
-    developer: 'Game Studio X',
-    releaseDate: '2023-05-15',
-    description: `Experience the future in this open-world action game. Cyber Adventure 2077 takes you to a dystopian future where corporations rule the world and cybernetic enhancements are the norm.
-    
-    Features:
-    - Immersive open world
-    - Customizable character with unique abilities
-    - Multiple endings based on your choices
-    - Stunning graphics and realistic physics
-    - Over 100 hours of gameplay
-    `,
-    systemRequirements: {
-      minimum: {
-        os: 'Windows 10 64-bit',
-        processor: 'Intel Core i5-4670K or AMD Ryzen 3 1300X',
-        memory: '8 GB RAM',
-        graphics: 'NVIDIA GeForce GTX 970 or AMD Radeon RX 570',
-        storage: '70 GB available space',
-      },
-      recommended: {
-        os: 'Windows 10 64-bit',
-        processor: 'Intel Core i7-8700K or AMD Ryzen 5 3600X',
-        memory: '16 GB RAM',
-        graphics: 'NVIDIA GeForce RTX 3060 or AMD Radeon RX 6700 XT',
-        storage: '70 GB SSD',
-      }
-    },
-    reviews: [
-      {
-        id: 1,
-        user: 'GamerX',
-        avatar: 'https://via.placeholder.com/50',
-        rating: 5,
-        date: '2023-06-10',
-        comment: 'One of the best games I\'ve played. The story is amazing and the graphics are stunning!',
-      },
-      {
-        id: 2,
-        user: 'RPGLover',
-        avatar: 'https://via.placeholder.com/50',
-        rating: 4,
-        date: '2023-06-05',
-        comment: 'Great game with a lot of content. Some minor bugs but overall excellent experience.',
-      },
-      {
-        id: 3,
-        user: 'GameCritic',
-        avatar: 'https://via.placeholder.com/50',
-        rating: 4.5,
-        date: '2023-05-20',
-        comment: 'Impressive world-building and character development. The side quests are as engaging as the main story.',
-      }
-    ],
-    installationGuide: 'installation_guide_cyber_adventure.pdf',
-    videoTutorial: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-  }
-];
-
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
+}
+
+interface GameDetails {
+  _id: string;
+  title: string;
+  price: number;
+  discountPrice?: number;
+  description: string;
+  genre?: string[];
+  platform?: string[];
+  publisher?: string;
+  developer?: string;
+  releaseDate?: string;
+  rating?: string;
+  stock?: number;
+  images?: string[];
+  systemRequirements?: {
+    minimum: {
+      os: string;
+      processor: string;
+      memory: string;
+      graphics: string;
+      storage: string;
+    };
+    recommended: {
+      os: string;
+      processor: string;
+      memory: string;
+      graphics: string;
+      storage: string;
+    };
+  };
 }
 
 function TabPanel(props: TabPanelProps) {
@@ -145,14 +103,40 @@ export default function GameDetailsPage() {
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState<number | null>(null);
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [game, setGame] = useState<GameDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Context hooks
   const { user } = useAuth();
   const { addToCart, loading: cartLoading } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist, isInWishlist, loading: wishlistLoading } = useWishlist();
   
-  // Find game by ID
-  const game = MOCK_GAMES.find(game => game.id === Number(id)) || MOCK_GAMES[0];
+  // Fetch game details by ID
+  useEffect(() => {
+    const fetchGameDetails = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/games/${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setGame(data.data);
+        } else {
+          setError('Failed to fetch game details');
+        }
+      } catch (err) {
+        console.error('Error fetching game details:', err);
+        setError('Error connecting to server');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchGameDetails();
+  }, [id]);
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -166,7 +150,7 @@ export default function GameDetailsPage() {
   };
   
   const handleAddToCart = async () => {
-    if (!user) {
+    if (!user || !game) {
       setNotification({
         type: 'error',
         message: 'Please login to add items to your cart'
@@ -175,7 +159,7 @@ export default function GameDetailsPage() {
     }
     
     try {
-      await addToCart(game.id.toString(), 1);
+      await addToCart(game._id, 1);
       setNotification({
         type: 'success',
         message: 'Game added to cart successfully!'
@@ -189,7 +173,7 @@ export default function GameDetailsPage() {
   };
   
   const toggleWishlist = async () => {
-    if (!user) {
+    if (!user || !game) {
       setNotification({
         type: 'error',
         message: 'Please login to use wishlist'
@@ -198,15 +182,14 @@ export default function GameDetailsPage() {
     }
     
     try {
-      const gameId = game.id.toString();
-      if (isInWishlist(gameId)) {
-        await removeFromWishlist(gameId);
+      if (isInWishlist(game._id)) {
+        await removeFromWishlist(game._id);
         setNotification({
           type: 'success',
           message: 'Game removed from wishlist'
         });
       } else {
-        await addToWishlist(gameId);
+        await addToWishlist(game._id);
         setNotification({
           type: 'success',
           message: 'Game added to wishlist'
@@ -223,6 +206,75 @@ export default function GameDetailsPage() {
   const closeNotification = () => {
     setNotification(null);
   };
+  
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  
+  if (error || !game) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 5 }}>
+        <Typography variant="h5" color="error" gutterBottom>
+          {error || 'Game not found'}
+        </Typography>
+        <Button variant="contained" href="/" sx={{ mt: 2 }}>
+          Return to Home
+        </Button>
+      </Box>
+    );
+  }
+  
+  // Mock reviews - would be fetched from API in real app
+  const mockReviews = [
+    {
+      id: 1,
+      user: 'GamerX',
+      avatar: 'https://via.placeholder.com/50',
+      rating: 5,
+      date: '2023-06-10',
+      comment: 'One of the best games I\'ve played. The story is amazing and the graphics are stunning!',
+    },
+    {
+      id: 2,
+      user: 'RPGLover',
+      avatar: 'https://via.placeholder.com/50',
+      rating: 4,
+      date: '2023-06-05',
+      comment: 'Great game with a lot of content. Some minor bugs but overall excellent experience.',
+    },
+    {
+      id: 3,
+      user: 'GameCritic',
+      avatar: 'https://via.placeholder.com/50',
+      rating: 4.5,
+      date: '2023-05-20',
+      comment: 'Impressive world-building and character development. The side quests are as engaging as the main story.',
+    }
+  ];
+  
+  // Default system requirements if not provided
+  const defaultSystemRequirements = {
+    minimum: {
+      os: 'Windows 10 64-bit',
+      processor: 'Intel Core i5-4670K or AMD Ryzen 3 1300X',
+      memory: '8 GB RAM',
+      graphics: 'NVIDIA GeForce GTX 970 or AMD Radeon RX 570',
+      storage: '70 GB available space',
+    },
+    recommended: {
+      os: 'Windows 10 64-bit',
+      processor: 'Intel Core i7-8700K or AMD Ryzen 5 3600X',
+      memory: '16 GB RAM',
+      graphics: 'NVIDIA GeForce RTX 3060 or AMD Radeon RX 6700 XT',
+      storage: '70 GB SSD',
+    }
+  };
+  
+  const systemReqs = game.systemRequirements || defaultSystemRequirements;
   
   return (
     <Box>
@@ -247,22 +299,30 @@ export default function GameDetailsPage() {
         </Typography>
         
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-          <Chip label={`${game.category.charAt(0).toUpperCase() + game.category.slice(1)}`} />
+          {game.genre && game.genre.map((genre, index) => (
+            <Chip key={index} label={genre} />
+          ))}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Rating value={game.rating} precision={0.5} readOnly />
+            <Rating value={4.5} precision={0.5} readOnly />
             <Typography variant="body2" sx={{ ml: 1 }}>
-              ({game.reviews.length} reviews)
+              ({mockReviews.length} reviews)
             </Typography>
           </Box>
-          <Typography variant="body2">
-            Release Date: {game.releaseDate}
-          </Typography>
-          <Typography variant="body2">
-            Publisher: {game.publisher}
-          </Typography>
-          <Typography variant="body2">
-            Developer: {game.developer}
-          </Typography>
+          {game.releaseDate && (
+            <Typography variant="body2">
+              Release Date: {new Date(game.releaseDate).toLocaleDateString()}
+            </Typography>
+          )}
+          {game.publisher && (
+            <Typography variant="body2">
+              Publisher: {game.publisher}
+            </Typography>
+          )}
+          {game.developer && (
+            <Typography variant="body2">
+              Developer: {game.developer}
+            </Typography>
+          )}
         </Box>
       </Box>
       
@@ -273,7 +333,9 @@ export default function GameDetailsPage() {
           <Box sx={{ mb: 2 }}>
             <Box
               component="img"
-              src={game.images[selectedImage]}
+              src={game.images && game.images.length > 0 
+                ? game.images[selectedImage] 
+                : 'https://via.placeholder.com/800x450?text=No+Image+Available'}
               alt={`${game.title} screenshot`}
               sx={{
                 width: '100%',
@@ -284,26 +346,28 @@ export default function GameDetailsPage() {
             />
           </Box>
           
-          <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
-            {game.images.map((image, index) => (
-              <Box
-                key={index}
-                component="img"
-                src={image}
-                alt={`${game.title} thumbnail ${index + 1}`}
-                sx={{
-                  width: 100,
-                  height: 60,
-                  objectFit: 'cover',
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  border: index === selectedImage ? '2px solid' : 'none',
-                  borderColor: 'primary.main',
-                }}
-                onClick={() => setSelectedImage(index)}
-              />
-            ))}
-          </Box>
+          {game.images && game.images.length > 1 && (
+            <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
+              {game.images.map((image, index) => (
+                <Box
+                  key={index}
+                  component="img"
+                  src={image}
+                  alt={`${game.title} thumbnail ${index + 1}`}
+                  sx={{
+                    width: 100,
+                    height: 60,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    border: index === selectedImage ? '2px solid' : 'none',
+                    borderColor: 'primary.main',
+                  }}
+                  onClick={() => setSelectedImage(index)}
+                />
+              ))}
+            </Box>
+          )}
         </Grid>
         
         {/* Purchase Info Section */}
@@ -345,7 +409,7 @@ export default function GameDetailsPage() {
                 startIcon={wishlistLoading ? (
                   <CircularProgress size={20} />
                 ) : (
-                  isInWishlist(game.id.toString()) ? <Favorite /> : <FavoriteBorder />
+                  isInWishlist(game._id) ? <Favorite /> : <FavoriteBorder />
                 )}
                 onClick={toggleWishlist}
                 disabled={wishlistLoading}
@@ -353,7 +417,7 @@ export default function GameDetailsPage() {
               >
                 {wishlistLoading 
                   ? 'Processing...' 
-                  : (isInWishlist(game.id.toString()) ? 'In Wishlist' : 'Add to Wishlist')
+                  : (isInWishlist(game._id) ? 'In Wishlist' : 'Add to Wishlist')
                 }
               </Button>
               
@@ -379,7 +443,7 @@ export default function GameDetailsPage() {
                   startIcon={<FileDownload />} 
                   variant="text" 
                   component="a" 
-                  href={game.installationGuide} 
+                  href="#"
                   target="_blank"
                 >
                   Installation Guide (PDF)
@@ -429,23 +493,23 @@ export default function GameDetailsPage() {
                 <List>
                   <ListItem>
                     <Computer sx={{ mr: 2 }} />
-                    <ListItemText primary="Operating System" secondary={game.systemRequirements.minimum.os} />
+                    <ListItemText primary="Operating System" secondary={systemReqs.minimum.os} />
                   </ListItem>
                   <ListItem>
                     <Memory sx={{ mr: 2 }} />
-                    <ListItemText primary="Processor" secondary={game.systemRequirements.minimum.processor} />
+                    <ListItemText primary="Processor" secondary={systemReqs.minimum.processor} />
                   </ListItem>
                   <ListItem>
                     <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Memory" secondary={game.systemRequirements.minimum.memory} />
+                    <ListItemText primary="Memory" secondary={systemReqs.minimum.memory} />
                   </ListItem>
                   <ListItem>
                     <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Graphics" secondary={game.systemRequirements.minimum.graphics} />
+                    <ListItemText primary="Graphics" secondary={systemReqs.minimum.graphics} />
                   </ListItem>
                   <ListItem>
                     <Storage sx={{ mr: 2 }} />
-                    <ListItemText primary="Storage" secondary={game.systemRequirements.minimum.storage} />
+                    <ListItemText primary="Storage" secondary={systemReqs.minimum.storage} />
                   </ListItem>
                 </List>
               </Grid>
@@ -457,23 +521,23 @@ export default function GameDetailsPage() {
                 <List>
                   <ListItem>
                     <Computer sx={{ mr: 2 }} />
-                    <ListItemText primary="Operating System" secondary={game.systemRequirements.recommended.os} />
+                    <ListItemText primary="Operating System" secondary={systemReqs.recommended.os} />
                   </ListItem>
                   <ListItem>
                     <Memory sx={{ mr: 2 }} />
-                    <ListItemText primary="Processor" secondary={game.systemRequirements.recommended.processor} />
+                    <ListItemText primary="Processor" secondary={systemReqs.recommended.processor} />
                   </ListItem>
                   <ListItem>
                     <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Memory" secondary={game.systemRequirements.recommended.memory} />
+                    <ListItemText primary="Memory" secondary={systemReqs.recommended.memory} />
                   </ListItem>
                   <ListItem>
                     <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Graphics" secondary={game.systemRequirements.recommended.graphics} />
+                    <ListItemText primary="Graphics" secondary={systemReqs.recommended.graphics} />
                   </ListItem>
                   <ListItem>
                     <Storage sx={{ mr: 2 }} />
-                    <ListItemText primary="Storage" secondary={game.systemRequirements.recommended.storage} />
+                    <ListItemText primary="Storage" secondary={systemReqs.recommended.storage} />
                   </ListItem>
                 </List>
               </Grid>
@@ -489,20 +553,20 @@ export default function GameDetailsPage() {
               
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Rating value={game.rating} precision={0.5} readOnly size="large" />
+                  <Rating value={4.5} precision={0.5} readOnly size="large" />
                   <Typography variant="h6" sx={{ ml: 2 }}>
-                    {game.rating} out of 5
+                    4.5 out of 5
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Based on {game.reviews.length} reviews
+                  Based on {mockReviews.length} reviews
                 </Typography>
               </Box>
               
               <Divider sx={{ mb: 3 }} />
               
               {/* Review List */}
-              {game.reviews.map((review) => (
+              {mockReviews.map((review) => (
                 <Card key={review.id} sx={{ mb: 2 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', mb: 2 }}>
@@ -567,7 +631,7 @@ export default function GameDetailsPage() {
             </Typography>
             <Box sx={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', mb: 4 }}>
               <iframe
-                src={game.videoTutorial}
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -622,7 +686,7 @@ export default function GameDetailsPage() {
                 variant="contained" 
                 startIcon={<FileDownload />}
                 component="a"
-                href={game.installationGuide}
+                href="#"
                 target="_blank"
               >
                 Download Full Installation Guide (PDF)

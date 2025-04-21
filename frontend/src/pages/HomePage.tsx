@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Grid, 
   Typography, 
@@ -24,7 +24,7 @@ import {
   Alert
 } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Favorite, FavoriteBorder, ShoppingCart } from '@mui/icons-material';
+import { Favorite, FavoriteBorder, ShoppingCart, Refresh } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -52,6 +52,7 @@ export default function HomePage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
+  const navigate = useNavigate();
   
   const { user } = useAuth();
   const { addToCart } = useCart();
@@ -61,6 +62,7 @@ export default function HomePage() {
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('search') || '';
   const categoryFilter = searchParams.get('category') || '';
+  const saleFilter = searchParams.get('sale') || '';
   
   const [games, setGames] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('featured');
@@ -70,18 +72,42 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processingGameId, setProcessingGameId] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   
-  // Fetch games from API
-  const fetchGames = async () => {
+  // Fetch games from API with memoized callback to prevent unnecessary re-renders
+  const fetchGames = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/games');
+      // Build query parameters for server-side filtering when possible
+      let url = '/api/games';
+      const apiParams = new URLSearchParams();
+      
+      if (searchQuery) {
+        apiParams.append('search', searchQuery);
+      }
+      
+      if (categoryFilter) {
+        apiParams.append('genre', categoryFilter);
+      }
+      
+      if (saleFilter) {
+        apiParams.append('sale', 'true');
+      }
+      
+      // Add query parameters if any exist
+      if (apiParams.toString()) {
+        url += `?${apiParams.toString()}`;
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
       
       if (data.success) {
         setGames(data.data);
+        // Set lastRefresh timestamp whenever we successfully fetch new data
+        setLastRefresh(new Date());
       } else {
         setError('Failed to fetch games');
       }
@@ -91,9 +117,9 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, categoryFilter, saleFilter]);
   
-  // Fetch games on component mount, when location changes, or when game data is updated
+  // Fetch games on component mount, when relevant parameters change, or when game data is updated
   useEffect(() => {
     fetchGames();
     
@@ -105,7 +131,7 @@ export default function HomePage() {
     return () => {
       unsubscribe();
     };
-  }, [location.pathname]);
+  }, [fetchGames, location.search]);
   
   // Filter and sort games
   const getFilteredGames = () => {
@@ -187,7 +213,19 @@ export default function HomePage() {
   };
   
   const handleSortChange = (event: SelectChangeEvent) => {
-    setSortBy(event.target.value);
+    const newSortBy = event.target.value;
+    setSortBy(newSortBy);
+    
+    // Update URL to reflect sort option for shareable URLs and browser history
+    const newParams = new URLSearchParams(location.search);
+    if (newSortBy !== 'featured') {
+      newParams.set('sort', newSortBy);
+    } else {
+      newParams.delete('sort');
+    }
+    
+    // Update URL without forcing a page reload
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
   };
   
   const handlePriceRangeChange = (event: Event, newValue: number | number[]) => {
@@ -230,6 +268,11 @@ export default function HomePage() {
     }
   };
   
+  // Manual refresh function to force data reload
+  const handleManualRefresh = () => {
+    fetchGames();
+  };
+  
   if (loading && games.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -262,12 +305,28 @@ export default function HomePage() {
         </Box>
       )}
       
-      {/* Page Title */}
-      <Typography variant="h4" component="h1" gutterBottom>
-        {categoryFilter 
-          ? `${categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)} Games` 
-          : (searchQuery ? `Search Results for "${searchQuery}"` : 'Featured Games')}
-      </Typography>
+      {/* Page Title with Refresh Option */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" component="h1">
+          {categoryFilter 
+            ? `${categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)} Games` 
+            : (searchQuery ? `Search Results for "${searchQuery}"` : 'Featured Games')}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            Last updated: {lastRefresh.toLocaleTimeString()}
+          </Typography>
+          <Button 
+            startIcon={<Refresh />} 
+            onClick={handleManualRefresh}
+            disabled={loading}
+            size="small"
+          >
+            Refresh
+          </Button>
+        </Box>
+      </Box>
       
       {/* Filters and Sorting */}
       <Box sx={{ mb: 4, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2 }}>
