@@ -56,6 +56,14 @@ const GameSchema = new mongoose.Schema({
     required: [true, 'Please add stock quantity'],
     min: [0, 'Stock cannot be negative']
   },
+  systemRequirements: {
+    type: String,
+    default: ''
+  },
+  installationTutorial: {
+    type: String,
+    default: ''
+  },
   images: {
     type: [String],
     default: ['default.jpg']

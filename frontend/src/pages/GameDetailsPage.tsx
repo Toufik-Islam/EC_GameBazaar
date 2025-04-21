@@ -44,6 +44,18 @@ interface TabPanelProps {
   value: number;
 }
 
+interface Review {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  };
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 interface GameDetails {
   _id: string;
   title: string;
@@ -58,22 +70,13 @@ interface GameDetails {
   rating?: string;
   stock?: number;
   images?: string[];
-  systemRequirements?: {
-    minimum: {
-      os: string;
-      processor: string;
-      memory: string;
-      graphics: string;
-      storage: string;
-    };
-    recommended: {
-      os: string;
-      processor: string;
-      memory: string;
-      graphics: string;
-      storage: string;
-    };
-  };
+  systemRequirements?: string;
+  installationTutorial?: string;
+  featured?: boolean;
+  onSale?: boolean;
+  reviews?: Review[];
+  averageRating?: number;
+  numReviews?: number;
 }
 
 function TabPanel(props: TabPanelProps) {
@@ -106,6 +109,7 @@ export default function GameDetailsPage() {
   const [game, setGame] = useState<GameDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   
   // Context hooks
   const { user } = useAuth();
@@ -124,6 +128,17 @@ export default function GameDetailsPage() {
         
         if (data.success) {
           setGame(data.data);
+          
+          // Fetch reviews for this game if available
+          try {
+            const reviewsResponse = await fetch(`/api/reviews?game=${id}`);
+            const reviewsData = await reviewsResponse.json();
+            if (reviewsData.success) {
+              setReviews(reviewsData.data);
+            }
+          } catch (err) {
+            console.error('Error fetching reviews:', err);
+          }
         } else {
           setError('Failed to fetch game details');
         }
@@ -142,11 +157,67 @@ export default function GameDetailsPage() {
     setTabValue(newValue);
   };
   
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Review submitted! (This would be sent to the server in a real app)');
-    setReviewText('');
-    setReviewRating(null);
+    
+    if (!user || !game) {
+      setNotification({
+        type: 'error',
+        message: 'Please login to submit a review'
+      });
+      return;
+    }
+    
+    if (!reviewRating || !reviewText.trim()) {
+      setNotification({
+        type: 'error',
+        message: 'Please provide both rating and review text'
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          game: game._id,
+          rating: reviewRating,
+          comment: reviewText
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Review submitted successfully!'
+        });
+        
+        // Add the new review to the list
+        if (data.data) {
+          setReviews(prev => [data.data, ...prev]);
+        }
+        
+        // Reset form
+        setReviewText('');
+        setReviewRating(null);
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to submit review'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
   };
   
   const handleAddToCart = async () => {
@@ -228,54 +299,6 @@ export default function GameDetailsPage() {
     );
   }
   
-  // Mock reviews - would be fetched from API in real app
-  const mockReviews = [
-    {
-      id: 1,
-      user: 'GamerX',
-      avatar: 'https://via.placeholder.com/50',
-      rating: 5,
-      date: '2023-06-10',
-      comment: 'One of the best games I\'ve played. The story is amazing and the graphics are stunning!',
-    },
-    {
-      id: 2,
-      user: 'RPGLover',
-      avatar: 'https://via.placeholder.com/50',
-      rating: 4,
-      date: '2023-06-05',
-      comment: 'Great game with a lot of content. Some minor bugs but overall excellent experience.',
-    },
-    {
-      id: 3,
-      user: 'GameCritic',
-      avatar: 'https://via.placeholder.com/50',
-      rating: 4.5,
-      date: '2023-05-20',
-      comment: 'Impressive world-building and character development. The side quests are as engaging as the main story.',
-    }
-  ];
-  
-  // Default system requirements if not provided
-  const defaultSystemRequirements = {
-    minimum: {
-      os: 'Windows 10 64-bit',
-      processor: 'Intel Core i5-4670K or AMD Ryzen 3 1300X',
-      memory: '8 GB RAM',
-      graphics: 'NVIDIA GeForce GTX 970 or AMD Radeon RX 570',
-      storage: '70 GB available space',
-    },
-    recommended: {
-      os: 'Windows 10 64-bit',
-      processor: 'Intel Core i7-8700K or AMD Ryzen 5 3600X',
-      memory: '16 GB RAM',
-      graphics: 'NVIDIA GeForce RTX 3060 or AMD Radeon RX 6700 XT',
-      storage: '70 GB SSD',
-    }
-  };
-  
-  const systemReqs = game.systemRequirements || defaultSystemRequirements;
-  
   return (
     <Box>
       {/* Notification */}
@@ -303,9 +326,9 @@ export default function GameDetailsPage() {
             <Chip key={index} label={genre} />
           ))}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Rating value={4.5} precision={0.5} readOnly />
+            <Rating value={game.averageRating || 0} precision={0.5} readOnly />
             <Typography variant="body2" sx={{ ml: 1 }}>
-              ({mockReviews.length} reviews)
+              ({game.numReviews || 0} reviews)
             </Typography>
           </Box>
           {game.releaseDate && (
@@ -485,63 +508,15 @@ export default function GameDetailsPage() {
           
           {/* System Requirements Tab */}
           <TabPanel value={tabValue} index={1}>
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" gutterBottom>
-                  Minimum Requirements
-                </Typography>
-                <List>
-                  <ListItem>
-                    <Computer sx={{ mr: 2 }} />
-                    <ListItemText primary="Operating System" secondary={systemReqs.minimum.os} />
-                  </ListItem>
-                  <ListItem>
-                    <Memory sx={{ mr: 2 }} />
-                    <ListItemText primary="Processor" secondary={systemReqs.minimum.processor} />
-                  </ListItem>
-                  <ListItem>
-                    <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Memory" secondary={systemReqs.minimum.memory} />
-                  </ListItem>
-                  <ListItem>
-                    <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Graphics" secondary={systemReqs.minimum.graphics} />
-                  </ListItem>
-                  <ListItem>
-                    <Storage sx={{ mr: 2 }} />
-                    <ListItemText primary="Storage" secondary={systemReqs.minimum.storage} />
-                  </ListItem>
-                </List>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" gutterBottom>
-                  Recommended Requirements
-                </Typography>
-                <List>
-                  <ListItem>
-                    <Computer sx={{ mr: 2 }} />
-                    <ListItemText primary="Operating System" secondary={systemReqs.recommended.os} />
-                  </ListItem>
-                  <ListItem>
-                    <Memory sx={{ mr: 2 }} />
-                    <ListItemText primary="Processor" secondary={systemReqs.recommended.processor} />
-                  </ListItem>
-                  <ListItem>
-                    <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Memory" secondary={systemReqs.recommended.memory} />
-                  </ListItem>
-                  <ListItem>
-                    <PhoneAndroid sx={{ mr: 2 }} />
-                    <ListItemText primary="Graphics" secondary={systemReqs.recommended.graphics} />
-                  </ListItem>
-                  <ListItem>
-                    <Storage sx={{ mr: 2 }} />
-                    <ListItemText primary="Storage" secondary={systemReqs.recommended.storage} />
-                  </ListItem>
-                </List>
-              </Grid>
-            </Grid>
+            {game.systemRequirements ? (
+              <Typography variant="body1" paragraph component="div" sx={{ whiteSpace: 'pre-line' }}>
+                {game.systemRequirements}
+              </Typography>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                System requirements information is not available for this game.
+              </Typography>
+            )}
           </TabPanel>
           
           {/* Reviews Tab */}
@@ -553,145 +528,145 @@ export default function GameDetailsPage() {
               
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Rating value={4.5} precision={0.5} readOnly size="large" />
+                  <Rating value={game.averageRating || 0} precision={0.5} readOnly size="large" />
                   <Typography variant="h6" sx={{ ml: 2 }}>
-                    4.5 out of 5
+                    {game.averageRating ? game.averageRating.toFixed(1) : '0'} out of 5
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Based on {mockReviews.length} reviews
+                  Based on {game.numReviews || 0} reviews
                 </Typography>
               </Box>
               
               <Divider sx={{ mb: 3 }} />
               
               {/* Review List */}
-              {mockReviews.map((review) => (
-                <Card key={review.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', mb: 2 }}>
-                      <Avatar src={review.avatar} alt={review.user} />
-                      <Box sx={{ ml: 2 }}>
-                        <Typography variant="subtitle1">{review.user}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Rating value={review.rating} precision={0.5} size="small" readOnly />
-                          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                            {review.date}
-                          </Typography>
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <Card key={review._id} sx={{ mb: 2 }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', mb: 2 }}>
+                        <Avatar src={review.user.avatar} alt={review.user.name} />
+                        <Box sx={{ ml: 2 }}>
+                          <Typography variant="subtitle1">{review.user.name}</Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Rating value={review.rating} precision={0.5} size="small" readOnly />
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Box>
-                    </Box>
-                    <Typography variant="body1">{review.comment}</Typography>
-                  </CardContent>
-                </Card>
-              ))}
+                      <Typography variant="body1">{review.comment}</Typography>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Typography color="text.secondary">
+                  No reviews yet. Be the first to review this game!
+                </Typography>
+              )}
               
               {/* Submit Review Form */}
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                  Write a Review
-                </Typography>
-                <form onSubmit={handleSubmitReview}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography component="legend">Your Rating</Typography>
-                    <Rating
-                      name="review-rating"
-                      value={reviewRating}
-                      onChange={(event, newValue) => {
-                        setReviewRating(newValue);
-                      }}
-                      precision={0.5}
+              {user && (
+                <Box sx={{ mt: 4 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Write a Review
+                  </Typography>
+                  <form onSubmit={handleSubmitReview}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography component="legend">Your Rating</Typography>
+                      <Rating
+                        name="review-rating"
+                        value={reviewRating}
+                        onChange={(event, newValue) => {
+                          setReviewRating(newValue);
+                        }}
+                        precision={0.5}
+                      />
+                    </Box>
+                    <TextField
+                      label="Your Review"
+                      multiline
+                      rows={4}
+                      fullWidth
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      sx={{ mb: 2 }}
                     />
-                  </Box>
-                  <TextField
-                    label="Your Review"
-                    multiline
-                    rows={4}
-                    fullWidth
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    sx={{ mb: 2 }}
-                  />
-                  <Button 
-                    type="submit" 
-                    variant="contained"
-                    disabled={!reviewRating || !reviewText.trim()}
-                  >
-                    Submit Review
-                  </Button>
-                </form>
-              </Box>
+                    <Button 
+                      type="submit" 
+                      variant="contained"
+                      disabled={!reviewRating || !reviewText.trim()}
+                    >
+                      Submit Review
+                    </Button>
+                  </form>
+                </Box>
+              )}
+              
+              {!user && (
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                  <Typography variant="body1">
+                    Please <Button href="/login" variant="text" sx={{ mx: 1 }}>login</Button> 
+                    to leave a review.
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </TabPanel>
           
           {/* Installation Tutorial Tab */}
           <TabPanel value={tabValue} index={3}>
-            <Typography variant="h6" gutterBottom>
-              Video Tutorial
-            </Typography>
-            <Box sx={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', mb: 4 }}>
-              <iframe
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="Game Installation Tutorial"
-              />
-            </Box>
-            
-            <Typography variant="h6" gutterBottom>
-              Step-by-Step Installation Guide
-            </Typography>
-            <List>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 1: Download the Game" 
-                  secondary="After purchase, download the game installer from your account's 'My Games' section."
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 2: Run the Installer" 
-                  secondary="Double-click the downloaded file to start the installation process."
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 3: Choose Installation Location" 
-                  secondary="Select where you want to install the game on your computer."
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 4: Select Components" 
-                  secondary="Choose which components to install (full game, additional content, etc.)."
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 5: Wait for Installation" 
-                  secondary="The installer will copy files to your computer. This may take some time depending on your system."
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="Step 6: Launch the Game" 
-                  secondary="Once installation is complete, you can launch the game from your desktop or start menu."
-                />
-              </ListItem>
-            </List>
-            
-            <Box sx={{ mt: 3 }}>
-              <Button 
-                variant="contained" 
-                startIcon={<FileDownload />}
-                component="a"
-                href="#"
-                target="_blank"
-              >
-                Download Full Installation Guide (PDF)
-              </Button>
-            </Box>
+            {game.installationTutorial ? (
+              <Typography variant="body1" paragraph component="div" sx={{ whiteSpace: 'pre-line' }}>
+                {game.installationTutorial}
+              </Typography>
+            ) : (
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Step-by-Step Installation Guide
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 1: Download the Game" 
+                      secondary="After purchase, download the game installer from your account's 'My Games' section."
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 2: Run the Installer" 
+                      secondary="Double-click the downloaded file to start the installation process."
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 3: Choose Installation Location" 
+                      secondary="Select where you want to install the game on your computer."
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 4: Select Components" 
+                      secondary="Choose which components to install (full game, additional content, etc.)."
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 5: Wait for Installation" 
+                      secondary="The installer will copy files to your computer. This may take some time depending on your system."
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Step 6: Launch the Game" 
+                      secondary="Once installation is complete, you can launch the game from your desktop or start menu."
+                    />
+                  </ListItem>
+                </List>
+              </Box>
+            )}
           </TabPanel>
         </Paper>
       </Box>
