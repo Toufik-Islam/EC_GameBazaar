@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { 
@@ -20,110 +19,16 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
-  SelectChangeEvent
+  SelectChangeEvent,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { Favorite, FavoriteBorder, ShoppingCart } from '@mui/icons-material';
-
-// Temporary game data - would be fetched from API in real app
-const MOCK_GAMES = [
-  {
-    id: 1,
-    title: 'Cyber Adventure 2077',
-    price: 59.99,
-    discountPrice: 49.99,
-    rating: 4.5,
-    image: 'https://via.placeholder.com/300x200?text=Cyber+Adventure',
-    category: 'action',
-    publisher: 'Game Studio X',
-    downloads: 15000,
-    releaseDate: '2023-05-15'
-  },
-  {
-    id: 2,
-    title: 'Fantasy Quest III',
-    price: 39.99,
-    discountPrice: null,
-    rating: 4.8,
-    image: 'https://via.placeholder.com/300x200?text=Fantasy+Quest',
-    category: 'rpg',
-    publisher: 'RPG Masters',
-    downloads: 25000,
-    releaseDate: '2022-11-30'
-  },
-  {
-    id: 3,
-    title: 'Space Explorer',
-    price: 29.99,
-    discountPrice: 19.99,
-    rating: 4.0,
-    image: 'https://via.placeholder.com/300x200?text=Space+Explorer',
-    category: 'adventure',
-    publisher: 'Cosmic Games',
-    downloads: 8000,
-    releaseDate: '2023-02-10'
-  },
-  {
-    id: 4,
-    title: 'City Builder Pro',
-    price: 24.99,
-    discountPrice: null,
-    rating: 4.2,
-    image: 'https://via.placeholder.com/300x200?text=City+Builder',
-    category: 'simulation',
-    publisher: 'Sim Studios',
-    downloads: 12000,
-    releaseDate: '2023-01-05'
-  },
-  {
-    id: 5,
-    title: 'Racing Evolution',
-    price: 49.99,
-    discountPrice: 34.99,
-    rating: 4.7,
-    image: 'https://via.placeholder.com/300x200?text=Racing+Evolution',
-    category: 'sports',
-    publisher: 'Speed Games',
-    downloads: 18000,
-    releaseDate: '2022-12-15'
-  },
-  {
-    id: 6,
-    title: 'Puzzle Master',
-    price: 19.99,
-    discountPrice: null,
-    rating: 4.3,
-    image: 'https://via.placeholder.com/300x200?text=Puzzle+Master',
-    category: 'puzzle',
-    publisher: 'Brain Games Inc',
-    downloads: 9000,
-    releaseDate: '2023-03-20'
-  },
-  {
-    id: 7,
-    title: 'War Strategy 2',
-    price: 44.99,
-    discountPrice: 39.99,
-    rating: 4.4,
-    image: 'https://via.placeholder.com/300x200?text=War+Strategy',
-    category: 'strategy',
-    publisher: 'Tactical Games',
-    downloads: 14000,
-    releaseDate: '2022-10-25'
-  },
-  {
-    id: 8,
-    title: 'Zombie Survival',
-    price: 34.99,
-    discountPrice: null,
-    rating: 4.1,
-    image: 'https://via.placeholder.com/300x200?text=Zombie+Survival',
-    category: 'action',
-    publisher: 'Horror Studios',
-    downloads: 11000,
-    releaseDate: '2023-04-05'
-  }
-];
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { gameEvents } from './AdminDashboard';
 
 // Featured banners
 const FEATURED_BANNERS = [
@@ -148,40 +53,86 @@ export default function HomePage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  
   // Get URL parameters
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('search') || '';
   const categoryFilter = searchParams.get('category') || '';
   
-  const [games, setGames] = useState(MOCK_GAMES);
+  const [games, setGames] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('featured');
-  const [priceRange, setPriceRange] = useState<number[]>([0, 60]);
+  const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesPerPage] = useState(6);
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [processingGameId, setProcessingGameId] = useState<string | null>(null);
+  
+  // Fetch games from API
+  const fetchGames = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/games');
+      const data = await response.json();
+      
+      if (data.success) {
+        setGames(data.data);
+      } else {
+        setError('Failed to fetch games');
+      }
+    } catch (err) {
+      setError('Error connecting to server');
+      console.error('Error fetching games:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch games on component mount, when location changes, or when game data is updated
+  useEffect(() => {
+    fetchGames();
+    
+    // Subscribe to game changes from AdminDashboard
+    const unsubscribe = gameEvents.subscribe(() => {
+      fetchGames();
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [location.pathname]);
   
   // Filter and sort games
-  useEffect(() => {
-    let filteredGames = [...MOCK_GAMES];
+  const getFilteredGames = () => {
+    if (games.length === 0) return [];
+    
+    let filteredGames = [...games];
     
     // Apply search filter
     if (searchQuery) {
       filteredGames = filteredGames.filter(game => 
         game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        game.publisher.toLowerCase().includes(searchQuery.toLowerCase())
+        (game.publisher && game.publisher.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
     // Apply category filter
     if (categoryFilter) {
       filteredGames = filteredGames.filter(game => 
-        game.category.toLowerCase() === categoryFilter.toLowerCase()
+        game.genre && game.genre.some((g: string) => 
+          g.toLowerCase() === categoryFilter.toLowerCase()
+        )
       );
     }
     
     // Apply price range filter
     filteredGames = filteredGames.filter(game => {
-      const priceToCheck = game.discountPrice || game.price;
+      const priceToCheck = game.discountPrice > 0 ? game.discountPrice : game.price;
       return priceToCheck >= priceRange[0] && priceToCheck <= priceRange[1];
     });
     
@@ -189,15 +140,15 @@ export default function HomePage() {
     switch (sortBy) {
       case 'price-low':
         filteredGames.sort((a, b) => {
-          const priceA = a.discountPrice || a.price;
-          const priceB = b.discountPrice || b.price;
+          const priceA = a.discountPrice > 0 ? a.discountPrice : a.price;
+          const priceB = b.discountPrice > 0 ? b.discountPrice : b.price;
           return priceA - priceB;
         });
         break;
       case 'price-high':
         filteredGames.sort((a, b) => {
-          const priceA = a.discountPrice || a.price;
-          const priceB = b.discountPrice || b.price;
+          const priceA = a.discountPrice > 0 ? a.discountPrice : a.price;
+          const priceB = b.discountPrice > 0 ? b.discountPrice : b.price;
           return priceB - priceA;
         });
         break;
@@ -207,25 +158,28 @@ export default function HomePage() {
         );
         break;
       case 'rating':
-        filteredGames.sort((a, b) => b.rating - a.rating);
+        // If rating is added to the backend model, sort by it
+        // For now, default to featured
         break;
       case 'popularity':
-        filteredGames.sort((a, b) => b.downloads - a.downloads);
+        // If downloads/popularity is added to the backend model, sort by it
+        // For now, default to featured
         break;
       default: // 'featured'
-        // Keep original order (which is presumed to be "featured")
+        // Keep original order
         break;
     }
     
-    setGames(filteredGames);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [searchQuery, categoryFilter, sortBy, priceRange]);
+    return filteredGames;
+  };
+  
+  const filteredGames = getFilteredGames();
   
   // Pagination
   const indexOfLastGame = currentPage * gamesPerPage;
   const indexOfFirstGame = indexOfLastGame - gamesPerPage;
-  const currentGames = games.slice(indexOfFirstGame, indexOfLastGame);
-  const pageCount = Math.ceil(games.length / gamesPerPage);
+  const currentGames = filteredGames.slice(indexOfFirstGame, indexOfLastGame);
+  const pageCount = Math.ceil(filteredGames.length / gamesPerPage);
   
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setCurrentPage(value);
@@ -240,16 +194,58 @@ export default function HomePage() {
     setPriceRange(newValue as number[]);
   };
   
-  const toggleWishlist = (gameId: number) => {
-    if (wishlist.includes(gameId)) {
-      setWishlist(wishlist.filter(id => id !== gameId));
-    } else {
-      setWishlist([...wishlist, gameId]);
+  const handleToggleWishlist = async (gameId: string) => {
+    if (!user) {
+      alert('Please login to use wishlist features');
+      return;
+    }
+    
+    setProcessingGameId(gameId);
+    try {
+      if (isInWishlist(gameId)) {
+        await removeFromWishlist(gameId);
+      } else {
+        await addToWishlist(gameId);
+      }
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+    } finally {
+      setProcessingGameId(null);
     }
   };
   
+  const handleAddToCart = async (gameId: string) => {
+    if (!user) {
+      alert('Please login to add items to cart');
+      return;
+    }
+    
+    setProcessingGameId(gameId);
+    try {
+      await addToCart(gameId, 1);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+    } finally {
+      setProcessingGameId(null);
+    }
+  };
+  
+  if (loading && games.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
       {/* Featured Banner - Only show on home with no filters */}
       {!searchQuery && !categoryFilter && (
         <Box sx={{ mb: 4, overflow: 'hidden', borderRadius: 2 }}>
@@ -302,8 +298,8 @@ export default function HomePage() {
             onChange={handlePriceRangeChange}
             valueLabelDisplay="auto"
             min={0}
-            max={60}
-            step={5}
+            max={100}
+            step={10}
             marks
             aria-labelledby="price-range-slider"
           />
@@ -314,52 +310,67 @@ export default function HomePage() {
       {currentGames.length > 0 ? (
         <Grid container spacing={3}>
           {currentGames.map((game) => (
-            <Grid item key={game.id} xs={12} sm={6} md={4}>
+            <Grid item key={game._id} xs={12} sm={6} md={4}>
               <Card className="game-card" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Link to={`/game/${game.id}`}>
+                <Link to={`/game/${game._id}`}>
                   <CardMedia
                     component="img"
                     height="140"
-                    image={game.image}
+                    image={game.images && game.images.length > 0 
+                      ? game.images[0] 
+                      : 'https://via.placeholder.com/300x200?text=Game+Image'}
                     alt={game.title}
                   />
                 </Link>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Typography gutterBottom variant="h6" component="h2" sx={{ flex: 1 }}>
-                      <Link to={`/game/${game.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      <Link to={`/game/${game._id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                         {game.title}
                       </Link>
                     </Typography>
                     <IconButton 
                       size="small" 
-                      onClick={() => toggleWishlist(game.id)}
+                      onClick={() => handleToggleWishlist(game._id)}
                       color="secondary"
+                      disabled={processingGameId === game._id}
                     >
-                      {wishlist.includes(game.id) ? <Favorite /> : <FavoriteBorder />}
+                      {processingGameId === game._id ? (
+                        <CircularProgress size={20} />
+                      ) : isInWishlist(game._id) ? (
+                        <Favorite />
+                      ) : (
+                        <FavoriteBorder />
+                      )}
                     </IconButton>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating value={game.rating} precision={0.5} size="small" readOnly />
+                    <Rating value={4} precision={0.5} size="small" readOnly />
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      ({game.rating})
+                      (4.0)
                     </Typography>
                   </Box>
                   
-                  <Chip 
-                    label={game.category.charAt(0).toUpperCase() + game.category.slice(1)} 
-                    size="small" 
-                    sx={{ mb: 1 }} 
-                  />
+                  {game.genre && game.genre.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      {game.genre.map((genre: string) => (
+                        <Chip 
+                          key={genre}
+                          label={genre} 
+                          size="small"
+                        />
+                      ))}
+                    </Box>
+                  )}
                   
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Publisher: {game.publisher}
+                    Publisher: {game.publisher || 'Unknown'}
                   </Typography>
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
                     <Box>
-                      {game.discountPrice ? (
+                      {game.discountPrice > 0 ? (
                         <>
                           <Typography variant="body1" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
                             ${game.price.toFixed(2)}
@@ -377,9 +388,11 @@ export default function HomePage() {
                     <Button 
                       size="small" 
                       variant="contained" 
-                      startIcon={<ShoppingCart />}
+                      startIcon={processingGameId === game._id ? <CircularProgress size={20} color="inherit" /> : <ShoppingCart />}
+                      onClick={() => handleAddToCart(game._id)}
+                      disabled={processingGameId === game._id}
                     >
-                      Add
+                      {processingGameId === game._id ? 'Adding...' : 'Add'}
                     </Button>
                   </Box>
                 </CardContent>

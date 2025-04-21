@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Grid,
@@ -28,6 +28,20 @@ import {
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+
+// Create a simple event system to notify other components when games are changed
+export const gameEvents = {
+  listeners: new Set<() => void>(),
+  
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  },
+  
+  emit() {
+    this.listeners.forEach(listener => listener());
+  }
+};
 
 interface Game {
   _id: string;
@@ -102,7 +116,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch games from the API
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/games');
@@ -119,12 +133,17 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Load games on component mount
   useEffect(() => {
     fetchGames();
-  }, []);
+    
+    // Subscribe to game changes from other components
+    return gameEvents.subscribe(() => {
+      fetchGames();
+    });
+  }, [fetchGames]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isThumb: boolean) => {
     const file = e.target.files?.[0];
@@ -199,8 +218,9 @@ export default function AdminDashboard() {
       console.log('Server response:', data);
 
       if (data.success) {
-        // Add the new game to the state
-        setGames([...games, data.data]);
+        // Add the new game to the state and emit change event
+        setGames(prevGames => [...prevGames, data.data]);
+        gameEvents.emit(); // Notify other components of the change
         setSuccess('Game added successfully!');
         
         // Reset form
@@ -244,8 +264,9 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        // Remove the game from the state
-        setGames(games.filter(game => game._id !== gameId));
+        // Remove the game from the state and emit change event
+        setGames(prevGames => prevGames.filter(game => game._id !== gameId));
+        gameEvents.emit(); // Notify other components of the change
         setSuccess('Game removed successfully!');
       } else {
         setError(data.message || 'Failed to remove game');
