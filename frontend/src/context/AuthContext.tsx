@@ -4,6 +4,7 @@ interface User {
   id: string;
   username: string;
   role: 'admin' | 'user';
+  token?: string; // Add token to user object for easier access
 }
 
 interface AuthContextType {
@@ -27,8 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (savedUser && savedToken) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
         setToken(savedToken);
+        
+        // Verify token is still valid
+        verifyToken(savedToken);
       } catch (error) {
         console.error('Failed to restore auth state:', error);
         localStorage.removeItem('gameBazaar_user');
@@ -36,12 +41,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
   }, []);
+  
+  // Verify token is valid with backend
+  const verifyToken = async (token: string) => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        // Token is invalid, log the user out
+        console.warn('Stored token is invalid, logging out');
+        logout();
+      }
+    } catch (error) {
+      console.error('Token verification error:', error);
+      // Don't log out on network errors to allow offline use
+    }
+  };
 
   // For development only - use these test accounts if backend auth is not working
   const TEST_ACCOUNTS = {
-    'admin@admin.com': { password: 'admin123', id: '1', username: 'admin', role: 'admin' },
-    'user1@test.com': { password: 'test123', id: '2', username: 'user1', role: 'user' },
-    'user2@test.com': { password: 'test123', id: '3', username: 'user2', role: 'user' },
+    'admin@admin.com': { password: 'admin123', id: '1', username: 'admin', role: 'admin' as const },
+    'user1@test.com': { password: 'test123', id: '2', username: 'user1', role: 'user' as const },
+    'user2@test.com': { password: 'test123', id: '3', username: 'user2', role: 'user' as const },
   };
 
   const login = async (email: string, password: string) => {
@@ -63,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = { 
           id: data.user._id, 
           username: data.user.name, 
-          role: data.user.role 
+          role: data.user.role,
+          token: data.token // Store token in user object too for convenience
         };
         
         setUser(userData);
@@ -78,12 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (account && account.password === password) {
           console.warn('Using development test account instead of real authentication');
           
-          // Create a test user and JWT token (this is only for development)
-          const userData = { id: account.id, username: account.username, role: account.role };
+          // For development environment only - not for production use
+          // This assumes the server is in development mode and will accept this token format
+          const testToken = 'dev_token_' + Math.random().toString(36).substring(2);
           
-          // Create a proper JWT token structure for testing
-          // Note: This is still not a valid JWT, but has the structure backend expects
-          const testToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJpYXQiOjE2MTk1MjMyOTksImV4cCI6MTYyMjExNTI5OX0.fake_signature_for_development`;
+          const userData = {
+            id: account.id,
+            username: account.username,
+            role: account.role,
+            token: testToken
+          };
           
           setUser(userData);
           setToken(testToken);

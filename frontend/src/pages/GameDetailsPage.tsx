@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box,
@@ -19,9 +19,14 @@ import {
   Avatar,
   Card,
   CardContent,
+  CardActions,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Menu,
+  MenuItem,
+  Collapse,
+  Stack
 } from '@mui/material';
 import {
   Favorite,
@@ -33,6 +38,15 @@ import {
   Storage,
   Memory,
   PhoneAndroid,
+  ThumbUp,
+  ThumbUpOutlined,
+  Reply,
+  MoreVert,
+  Delete,
+  Edit,
+  Send,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -44,6 +58,17 @@ interface TabPanelProps {
   value: number;
 }
 
+interface Reply {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  };
+  comment: string;
+  createdAt: string;
+}
+
 interface Review {
   _id: string;
   user: {
@@ -53,6 +78,8 @@ interface Review {
   };
   rating: number;
   comment: string;
+  likes: string[];
+  replies: Reply[];
   createdAt: string;
 }
 
@@ -74,7 +101,6 @@ interface GameDetails {
   installationTutorial?: string;
   featured?: boolean;
   onSale?: boolean;
-  reviews?: Review[];
   averageRating?: number;
   numReviews?: number;
 }
@@ -111,10 +137,28 @@ export default function GameDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   
+  // New state for reply functionality
+  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<{[key: string]: boolean}>({});
+  
+  // Menu state for review options
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [currentReviewId, setCurrentReviewId] = useState<string | null>(null);
+  
+  // Edit review state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editReviewId, setEditReviewId] = useState<string | null>(null);
+  const [editReviewText, setEditReviewText] = useState('');
+  const [editReviewRating, setEditReviewRating] = useState<number | null>(null);
+  
   // Context hooks
   const { user } = useAuth();
   const { addToCart, loading: cartLoading } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist, isInWishlist, loading: wishlistLoading } = useWishlist();
+  
+  // Refs for scrolling to reviews tab
+  const reviewsTabRef = useRef<HTMLDivElement>(null);
   
   // Fetch game details by ID
   useEffect(() => {
@@ -129,16 +173,8 @@ export default function GameDetailsPage() {
         if (data.success) {
           setGame(data.data);
           
-          // Fetch reviews for this game if available
-          try {
-            const reviewsResponse = await fetch(`/api/reviews?game=${id}`);
-            const reviewsData = await reviewsResponse.json();
-            if (reviewsData.success) {
-              setReviews(reviewsData.data);
-            }
-          } catch (err) {
-            console.error('Error fetching reviews:', err);
-          }
+          // Fetch reviews for this game
+          fetchReviews(id);
         } else {
           setError('Failed to fetch game details');
         }
@@ -152,6 +188,19 @@ export default function GameDetailsPage() {
     
     fetchGameDetails();
   }, [id]);
+  
+  // Fetch reviews function
+  const fetchReviews = async (gameId: string) => {
+    try {
+      const reviewsResponse = await fetch(`/api/reviews?game=${gameId}`);
+      const reviewsData = await reviewsResponse.json();
+      if (reviewsData.success) {
+        setReviews(reviewsData.data);
+      }
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    }
+  };
   
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -206,10 +255,257 @@ export default function GameDetailsPage() {
         // Reset form
         setReviewText('');
         setReviewRating(null);
+        
+        // Refresh game data to update average rating
+        const gameResponse = await fetch(`/api/games/${id}`);
+        const gameData = await gameResponse.json();
+        if (gameData.success) {
+          setGame(gameData.data);
+        }
       } else {
         setNotification({
           type: 'error',
           message: data.message || 'Failed to submit review'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
+  };
+  
+  const handleUpdateReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !editReviewId || !editReviewRating) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/reviews/${editReviewId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          rating: editReviewRating,
+          comment: editReviewText
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Review updated successfully!'
+        });
+        
+        // Update the review in the list
+        setReviews(prev => 
+          prev.map(review => 
+            review._id === editReviewId ? data.data : review
+          )
+        );
+        
+        // Exit edit mode
+        setIsEditing(false);
+        setEditReviewId(null);
+        setEditReviewText('');
+        setEditReviewRating(null);
+        
+        // Refresh game data to update average rating
+        const gameResponse = await fetch(`/api/games/${id}`);
+        const gameData = await gameResponse.json();
+        if (gameData.success) {
+          setGame(gameData.data);
+        }
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to update review'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
+  };
+  
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Review deleted successfully!'
+        });
+        
+        // Remove the review from the list
+        setReviews(prev => prev.filter(review => review._id !== reviewId));
+        
+        // Close menu
+        handleCloseMenu();
+        
+        // Refresh game data to update average rating
+        const gameResponse = await fetch(`/api/games/${id}`);
+        const gameData = await gameResponse.json();
+        if (gameData.success) {
+          setGame(gameData.data);
+        }
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to delete review'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
+  };
+  
+  const handleLikeReview = async (reviewId: string) => {
+    if (!user) {
+      setNotification({
+        type: 'error',
+        message: 'Please login to like reviews'
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}/like`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the review in the list
+        setReviews(prev => 
+          prev.map(review => 
+            review._id === reviewId ? data.data : review
+          )
+        );
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to like review'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
+  };
+  
+  const handleSubmitReply = async (reviewId: string) => {
+    if (!user || !replyText.trim()) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          comment: replyText
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Reply added successfully!'
+        });
+        
+        // Update the review in the list
+        setReviews(prev => 
+          prev.map(review => 
+            review._id === reviewId ? data.data : review
+          )
+        );
+        
+        // Reset form
+        setReplyText('');
+        setReplyingTo(null);
+        
+        // Expand replies for this review
+        setExpandedReplies(prev => ({
+          ...prev,
+          [reviewId]: true
+        }));
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to add reply'
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    }
+  };
+  
+  const handleDeleteReply = async (reviewId: string, replyId: string) => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}/reply/${replyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Reply deleted successfully!'
+        });
+        
+        // Update the review in the list
+        setReviews(prev => 
+          prev.map(review => 
+            review._id === reviewId ? data.data : review
+          )
+        );
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to delete reply'
         });
       }
     } catch (err) {
@@ -274,8 +570,78 @@ export default function GameDetailsPage() {
     }
   };
   
+  // Handle menu opening for review options
+  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, reviewId: string) => {
+    setMenuAnchorEl(event.currentTarget);
+    setCurrentReviewId(reviewId);
+  };
+  
+  // Handle menu closing for review options
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+    setCurrentReviewId(null);
+  };
+  
+  // Handle starting to edit a review
+  const handleStartEditReview = () => {
+    if (!currentReviewId) return;
+    
+    const review = reviews.find(r => r._id === currentReviewId);
+    if (!review) return;
+    
+    setEditReviewId(currentReviewId);
+    setEditReviewText(review.comment);
+    setEditReviewRating(review.rating);
+    setIsEditing(true);
+    handleCloseMenu();
+  };
+  
+  // Toggle reply form visibility
+  const toggleReplyForm = (reviewId: string | null) => {
+    setReplyingTo(replyingTo === reviewId ? null : reviewId);
+    setReplyText('');
+  };
+  
+  // Toggle replies visibility
+  const toggleReplies = (reviewId: string) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [reviewId]: !prev[reviewId]
+    }));
+  };
+  
+  // Cancel editing a review
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditReviewId(null);
+    setEditReviewText('');
+    setEditReviewRating(null);
+  };
+  
+  // Check if the current user has liked a review
+  const hasUserLikedReview = (reviewLikes: string[]) => {
+    return user ? reviewLikes.includes(user.id) : false;
+  };
+  
+  // Format date to a readable string
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+  
   const closeNotification = () => {
     setNotification(null);
+  };
+  
+  // Scroll to reviews tab
+  const scrollToReviews = () => {
+    setTabValue(2); // Set tab to reviews
+    setTimeout(() => {
+      reviewsTabRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
   
   if (loading) {
@@ -325,7 +691,7 @@ export default function GameDetailsPage() {
           {game.genre && game.genre.map((genre, index) => (
             <Chip key={index} label={genre} />
           ))}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={scrollToReviews}>
             <Rating value={game.averageRating || 0} precision={0.5} readOnly />
             <Typography variant="body2" sx={{ ml: 1 }}>
               ({game.numReviews || 0} reviews)
@@ -483,7 +849,7 @@ export default function GameDetailsPage() {
       </Grid>
       
       {/* Tabs Section */}
-      <Box sx={{ mt: 6 }}>
+      <Box sx={{ mt: 6 }} ref={reviewsTabRef}>
         <Paper sx={{ width: '100%' }}>
           <Tabs
             value={tabValue}
@@ -543,21 +909,172 @@ export default function GameDetailsPage() {
               {/* Review List */}
               {reviews.length > 0 ? (
                 reviews.map((review) => (
-                  <Card key={review._id} sx={{ mb: 2 }}>
+                  <Card key={review._id} sx={{ mb: 3 }}>
                     <CardContent>
-                      <Box sx={{ display: 'flex', mb: 2 }}>
-                        <Avatar src={review.user.avatar} alt={review.user.name} />
-                        <Box sx={{ ml: 2 }}>
-                          <Typography variant="subtitle1">{review.user.name}</Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Rating value={review.rating} precision={0.5} size="small" readOnly />
-                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                              {new Date(review.createdAt).toLocaleDateString()}
-                            </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                        <Box sx={{ display: 'flex' }}>
+                          <Avatar src={review.user.avatar} alt={review.user.name} />
+                          <Box sx={{ ml: 2 }}>
+                            <Typography variant="subtitle1">{review.user.name}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Rating value={review.rating} precision={0.5} size="small" readOnly />
+                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                {formatDate(review.createdAt)}
+                              </Typography>
+                            </Box>
                           </Box>
                         </Box>
+                        
+                        {/* Review Options Menu - only for the review owner or admin */}
+                        {user && (user.id === review.user._id || user.role === 'admin') && (
+                          <>
+                            <IconButton size="small" onClick={(e) => handleOpenMenu(e, review._id)}>
+                              <MoreVert />
+                            </IconButton>
+                            <Menu
+                              anchorEl={menuAnchorEl}
+                              open={Boolean(menuAnchorEl) && currentReviewId === review._id}
+                              onClose={handleCloseMenu}
+                            >
+                              <MenuItem onClick={handleStartEditReview}>
+                                <Edit fontSize="small" sx={{ mr: 1 }} /> Edit
+                              </MenuItem>
+                              <MenuItem onClick={() => handleDeleteReview(review._id)}>
+                                <Delete fontSize="small" sx={{ mr: 1 }} /> Delete
+                              </MenuItem>
+                            </Menu>
+                          </>
+                        )}
                       </Box>
-                      <Typography variant="body1">{review.comment}</Typography>
+                      
+                      {/* Review Content */}
+                      {isEditing && editReviewId === review._id ? (
+                        <Box component="form" onSubmit={handleUpdateReview} sx={{ mt: 2 }}>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography component="legend">Your Rating</Typography>
+                            <Rating
+                              name="edit-review-rating"
+                              value={editReviewRating}
+                              onChange={(event, newValue) => {
+                                setEditReviewRating(newValue);
+                              }}
+                              precision={0.5}
+                            />
+                          </Box>
+                          <TextField
+                            label="Your Review"
+                            multiline
+                            rows={4}
+                            fullWidth
+                            value={editReviewText}
+                            onChange={(e) => setEditReviewText(e.target.value)}
+                            sx={{ mb: 2 }}
+                          />
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button 
+                              type="submit" 
+                              variant="contained"
+                              disabled={!editReviewRating || !editReviewText.trim()}
+                            >
+                              Update Review
+                            </Button>
+                            <Button 
+                              variant="outlined"
+                              onClick={handleCancelEdit}
+                            >
+                              Cancel
+                            </Button>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <Typography variant="body1" paragraph>
+                          {review.comment}
+                        </Typography>
+                      )}
+                      
+                      {/* Like and Reply buttons */}
+                      {!isEditing && (
+                        <CardActions sx={{ pt: 0, pb: 1 }}>
+                          <Button 
+                            startIcon={hasUserLikedReview(review.likes) ? <ThumbUp /> : <ThumbUpOutlined />}
+                            onClick={() => handleLikeReview(review._id)}
+                            size="small"
+                          >
+                            {review.likes.length > 0 ? review.likes.length : ''} Like
+                          </Button>
+                          <Button 
+                            startIcon={<Reply />}
+                            onClick={() => toggleReplyForm(review._id)}
+                            size="small"
+                          >
+                            Reply
+                          </Button>
+                          {review.replies.length > 0 && (
+                            <Button
+                              onClick={() => toggleReplies(review._id)}
+                              endIcon={expandedReplies[review._id] ? <ExpandLess /> : <ExpandMore />}
+                              size="small"
+                            >
+                              {review.replies.length} {review.replies.length === 1 ? 'Reply' : 'Replies'}
+                            </Button>
+                          )}
+                        </CardActions>
+                      )}
+                      
+                      {/* Reply Form */}
+                      {replyingTo === review._id && (
+                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                          <TextField
+                            placeholder="Write a reply..."
+                            size="small"
+                            fullWidth
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                          />
+                          <Button 
+                            variant="contained" 
+                            onClick={() => handleSubmitReply(review._id)}
+                            disabled={!replyText.trim()}
+                          >
+                            <Send />
+                          </Button>
+                        </Box>
+                      )}
+                      
+                      {/* Replies */}
+                      {review.replies.length > 0 && (
+                        <Collapse in={expandedReplies[review._id]} timeout="auto" unmountOnExit>
+                          <Box sx={{ mt: 2, pl: 2, borderLeft: '1px solid', borderColor: 'divider' }}>
+                            {review.replies.map((reply) => (
+                              <Box key={reply._id} sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Box sx={{ display: 'flex', mb: 1 }}>
+                                    <Avatar src={reply.user.avatar} alt={reply.user.name} sx={{ width: 32, height: 32 }} />
+                                    <Box sx={{ ml: 1 }}>
+                                      <Typography variant="subtitle2">{reply.user.name}</Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {formatDate(reply.createdAt)}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                  
+                                  {/* Delete Reply Button - only for the reply owner or admin */}
+                                  {user && (user.id === reply.user._id || user.role === 'admin') && (
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleDeleteReply(review._id, reply._id)}
+                                      sx={{ p: 0.5 }}
+                                    >
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                </Box>
+                                <Typography variant="body2">{reply.comment}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Collapse>
+                      )}
                     </CardContent>
                   </Card>
                 ))
