@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Container,
@@ -14,71 +13,79 @@ import {
   IconButton,
   Chip,
   Divider,
-  Alert
+  Alert,
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import { Delete, ShoppingCart, Visibility } from '@mui/icons-material';
-
-// Mock data for wishlist items
-const MOCK_WISHLIST_ITEMS = [
-  {
-    id: 1,
-    title: 'Cyber Adventure 2077',
-    price: 59.99,
-    discountPrice: 49.99,
-    rating: 4.5,
-    image: 'https://via.placeholder.com/300x200?text=Cyber+Adventure',
-    category: 'action',
-    publisher: 'Game Studio X',
-    releaseDate: '2023-05-15'
-  },
-  {
-    id: 3,
-    title: 'Space Explorer',
-    price: 29.99,
-    discountPrice: 19.99,
-    rating: 4.0,
-    image: 'https://via.placeholder.com/300x200?text=Space+Explorer',
-    category: 'adventure',
-    publisher: 'Cosmic Games',
-    releaseDate: '2023-02-10'
-  },
-  {
-    id: 7,
-    title: 'War Strategy 2',
-    price: 44.99,
-    discountPrice: 39.99,
-    rating: 4.4,
-    image: 'https://via.placeholder.com/300x200?text=War+Strategy',
-    category: 'strategy',
-    publisher: 'Tactical Games',
-    releaseDate: '2022-10-25'
-  }
-];
+import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function WishlistPage() {
-  const [wishlistItems, setWishlistItems] = useState(MOCK_WISHLIST_ITEMS);
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState('');
+  const { user } = useAuth();
+  const { wishlist, removeFromWishlist, loading: wishlistLoading } = useWishlist();
+  const { addToCart, loading: cartLoading } = useCart();
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [itemProcessing, setItemProcessing] = useState<string | null>(null);
   
-  const removeFromWishlist = (id: number) => {
-    setWishlistItems(prevItems => prevItems.filter(item => item.id !== id));
-    setNotificationMessage('Game removed from wishlist');
-    setNotificationVisible(true);
-    
-    setTimeout(() => {
-      setNotificationVisible(false);
-    }, 3000);
+  const handleRemoveFromWishlist = async (gameId: string) => {
+    try {
+      setItemProcessing(gameId);
+      await removeFromWishlist(gameId);
+      setNotification({
+        type: 'success',
+        message: 'Game removed from wishlist'
+      });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to remove game from wishlist'
+      });
+    } finally {
+      setItemProcessing(null);
+    }
   };
   
-  const addToCart = (id: number) => {
-    // This would call an API to add to cart in a real app
-    setNotificationMessage('Game added to cart');
-    setNotificationVisible(true);
-    
-    setTimeout(() => {
-      setNotificationVisible(false);
-    }, 3000);
+  const handleAddToCart = async (gameId: string) => {
+    try {
+      setItemProcessing(gameId);
+      await addToCart(gameId, 1);
+      setNotification({
+        type: 'success',
+        message: 'Game added to cart'
+      });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to add game to cart'
+      });
+    } finally {
+      setItemProcessing(null);
+    }
   };
+
+  const closeNotification = () => {
+    setNotification(null);
+  };
+
+  if (!user) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography variant="h5" gutterBottom>
+          Please login to view your wishlist
+        </Typography>
+        <Button 
+          variant="contained" 
+          component={Link} 
+          to="/login"
+          sx={{ mt: 2 }}
+        >
+          Go to Login
+        </Button>
+      </Container>
+    );
+  }
   
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -86,49 +93,60 @@ export default function WishlistPage() {
         My Wishlist
       </Typography>
       
-      {notificationVisible && (
-        <Alert 
-          severity="success" 
-          sx={{ mb: 3 }}
-          onClose={() => setNotificationVisible(false)}
-        >
-          {notificationMessage}
-        </Alert>
-      )}
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {notification && (
+          <Alert onClose={closeNotification} severity={notification.type}>
+            {notification.message}
+          </Alert>
+        )}
+      </Snackbar>
       
-      {wishlistItems.length > 0 ? (
+      {wishlistLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : wishlist.games.length > 0 ? (
         <Grid container spacing={3}>
-          {wishlistItems.map((item) => (
-            <Grid item xs={12} sm={6} md={4} key={item.id}>
+          {wishlist.games.map((game) => (
+            <Grid item xs={12} sm={6} md={4} key={game._id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Link to={`/game/${item.id}`}>
+                <Link to={`/game/${game._id}`}>
                   <CardMedia
                     component="img"
                     height="140"
-                    image={item.image}
-                    alt={item.title}
+                    image={game.images[0] || 'https://via.placeholder.com/300x200?text=Game+Image'}
+                    alt={game.title}
                   />
                 </Link>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ mb: 2 }}>
                     <Typography gutterBottom variant="h6" component="h2">
-                      <Link to={`/game/${item.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                        {item.title}
+                      <Link to={`/game/${game._id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        {game.title}
                       </Link>
                     </Typography>
+                    {/* Rating would come from the API in a real app */}
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Rating value={item.rating} precision={0.5} size="small" readOnly />
+                      <Rating value={4.5} precision={0.5} size="small" readOnly />
                       <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        ({item.rating})
+                        (4.5)
                       </Typography>
                     </Box>
-                    <Chip 
-                      label={item.category.charAt(0).toUpperCase() + item.category.slice(1)} 
-                      size="small" 
-                      sx={{ mb: 1 }} 
-                    />
+                    {game.genre?.map(g => (
+                      <Chip 
+                        key={g}
+                        label={g} 
+                        size="small" 
+                        sx={{ mb: 1, mr: 0.5 }} 
+                      />
+                    ))}
                     <Typography variant="body2" color="text.secondary">
-                      {item.publisher}
+                      {game.publisher}
                     </Typography>
                   </Box>
                   
@@ -136,18 +154,18 @@ export default function WishlistPage() {
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      {item.discountPrice ? (
+                      {game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ${item.price.toFixed(2)}
+                            ${game.price.toFixed(2)}
                           </Typography>
                           <Typography variant="h6" color="error.main">
-                            ${item.discountPrice.toFixed(2)}
+                            ${game.discountPrice.toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="h6">
-                          ${item.price.toFixed(2)}
+                          ${game.price.toFixed(2)}
                         </Typography>
                       )}
                     </Box>
@@ -155,17 +173,19 @@ export default function WishlistPage() {
                       <IconButton 
                         color="primary" 
                         component={Link} 
-                        to={`/game/${item.id}`}
+                        to={`/game/${game._id}`}
                         size="small"
                       >
                         <Visibility />
                       </IconButton>
                       <IconButton 
                         color="error" 
-                        onClick={() => removeFromWishlist(item.id)}
+                        onClick={() => handleRemoveFromWishlist(game._id)}
+                        disabled={itemProcessing === game._id || wishlistLoading}
                         size="small"
                       >
-                        <Delete />
+                        {itemProcessing === game._id && wishlistLoading ? 
+                          <CircularProgress size={20} /> : <Delete />}
                       </IconButton>
                     </Box>
                   </Box>
@@ -173,11 +193,13 @@ export default function WishlistPage() {
                   <Button
                     variant="contained"
                     fullWidth
-                    startIcon={<ShoppingCart />}
+                    startIcon={itemProcessing === game._id && cartLoading ? 
+                      <CircularProgress size={20} color="inherit" /> : <ShoppingCart />}
                     sx={{ mt: 2 }}
-                    onClick={() => addToCart(item.id)}
+                    onClick={() => handleAddToCart(game._id)}
+                    disabled={itemProcessing === game._id || cartLoading}
                   >
-                    Add to Cart
+                    {itemProcessing === game._id && cartLoading ? 'Adding...' : 'Add to Cart'}
                   </Button>
                 </CardContent>
               </Card>

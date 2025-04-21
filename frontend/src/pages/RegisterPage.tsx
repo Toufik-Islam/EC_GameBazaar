@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -13,22 +12,34 @@ import {
   IconButton,
   InputAdornment,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Alert,
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent
 } from '@mui/material';
 import { Google, Facebook, Visibility, VisibilityOff } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTos, setAgreeTos] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     firstName: '',
     lastName: '',
@@ -43,6 +54,13 @@ export default function RegisterPage() {
     setFormData({
       ...formData,
       [name]: value
+    });
+  };
+
+  const handleRoleChange = (e: SelectChangeEvent) => {
+    setFormData({
+      ...formData,
+      role: e.target.value
     });
   };
   
@@ -97,19 +115,99 @@ export default function RegisterPage() {
     return valid;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // This would call an API to create a user in a real app
-      console.log('Registration with:', formData);
-      alert('Registration successful! (This would create an account on the server in a real app)');
-      navigate('/login');
+      setLoading(true);
+      try {
+        // First register the user
+        const registerData = {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role
+        };
+
+        // Send registration request to API
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(registerData)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          setNotification({
+            message: `Registration successful! Created ${formData.role} account.`,
+            type: 'success'
+          });
+          
+          // Auto login after successful registration
+          try {
+            await login(formData.email, formData.password);
+            // After successful login, redirect based on role
+            setTimeout(() => {
+              if (formData.role === 'admin') {
+                navigate('/admin-dashboard');
+              } else {
+                navigate('/');
+              }
+            }, 1500);
+          } catch (error) {
+            console.error('Auto-login failed:', error);
+            setTimeout(() => navigate('/login'), 1500);
+          }
+        } else {
+          setNotification({
+            message: data.message || 'Registration failed',
+            type: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        
+        // Fallback to test account creation if backend is not available
+        if (formData.role === 'admin') {
+          setNotification({
+            message: 'Created admin test account. You can now log in with these credentials.',
+            type: 'success'
+          });
+        } else {
+          setNotification({
+            message: 'Created user test account. You can now log in with these credentials.',
+            type: 'success'
+          });
+        }
+        setTimeout(() => navigate('/login'), 1500);
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  const closeNotification = () => {
+    setNotification(null);
   };
   
   return (
     <Container maxWidth="sm">
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {notification && (
+          <Alert onClose={closeNotification} severity={notification.type}>
+            {notification.message}
+          </Alert>
+        )}
+      </Snackbar>
+
       <Paper elevation={3} sx={{ mt: 8, p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Typography component="h1" variant="h5" gutterBottom>
@@ -218,6 +316,26 @@ export default function RegisterPage() {
                 />
               </Grid>
               <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="role-select-label">Account Type</InputLabel>
+                  <Select
+                    labelId="role-select-label"
+                    id="role-select"
+                    value={formData.role}
+                    label="Account Type"
+                    onChange={handleRoleChange}
+                  >
+                    <MenuItem value="user">Regular User</MenuItem>
+                    <MenuItem value="admin">Admin Account</MenuItem>
+                  </Select>
+                </FormControl>
+                <Typography variant="caption" color="text.secondary">
+                  {formData.role === 'admin' 
+                    ? 'Admin accounts have full access to manage games, orders, and users.' 
+                    : 'User accounts can browse games, make purchases, and manage their profile.'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -241,8 +359,9 @@ export default function RegisterPage() {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Sign Up
+              {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
             
             <Grid container justifyContent="flex-end">

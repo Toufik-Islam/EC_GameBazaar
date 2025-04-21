@@ -1,0 +1,33 @@
+{
+  "name": "gamebazaar",
+  "version": "1.0.0",
+  "description": "GameBazaar - Game E-commerce Platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "nodemon backend/server.js",
+    "client": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix frontend",
+    "install-all": "npm install && npm install --prefix frontend && npm install --prefix backend",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix frontend && npm run build --prefix frontend",
+    "data:import": "node backend/seeder.js -i",
+    "data:destroy": "node backend/seeder.js -d"
+  },
+  "keywords": [
+    "mongodb",
+    "express",
+    "react",
+    "node",
+    "games",
+    "ecommerce"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

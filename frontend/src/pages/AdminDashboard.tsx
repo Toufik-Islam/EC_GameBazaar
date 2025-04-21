@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Grid,
@@ -17,16 +16,32 @@ import {
   DialogTitle,
   DialogContent,
   TextField,
-  DialogActions
+  DialogActions,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
 interface Game {
-  id: string;
+  _id: string;
   title: string;
   price: number;
   description: string;
+  genre?: string[];
+  platform?: string[];
+  publisher?: string;
+  developer?: string;
+  releaseDate?: string;
+  rating?: string;
+  stock?: number;
+  images?: string[];
 }
 
 interface Order {
@@ -40,15 +55,18 @@ interface Order {
 export default function AdminDashboard() {
   const [tabValue, setTabValue] = useState(0);
   const [openAddGame, setOpenAddGame] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, token } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Mock data - replace with real API calls
+  // Mock data for orders - replace with real API calls
   const pendingOrders: Order[] = [
     {
       id: '1',
       customerName: 'John Doe',
       status: 'pending',
-      items: [{ id: '1', title: 'Game 1', price: 59.99, description: 'Action game' }],
+      items: [{ _id: '1', title: 'Game 1', price: 59.99, description: 'Action game' }],
       total: 59.99
     }
   ];
@@ -58,7 +76,7 @@ export default function AdminDashboard() {
       id: '2',
       customerName: 'Jane Smith',
       status: 'completed',
-      items: [{ id: '2', title: 'Game 2', price: 49.99, description: 'RPG game' }],
+      items: [{ _id: '2', title: 'Game 2', price: 49.99, description: 'RPG game' }],
       total: 49.99
     }
   ];
@@ -72,9 +90,41 @@ export default function AdminDashboard() {
     title: '',
     price: '',
     description: '',
-    thumbnail: '',
-    images: [] as string[]
+    genre: [] as string[],
+    platform: [] as string[],
+    developer: '',
+    publisher: '',
+    releaseDate: '',
+    rating: '',
+    stock: '',
+    images: [] as string[],
+    thumbnail: ''
   });
+
+  // Fetch games from the API
+  const fetchGames = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/games');
+      const data = await response.json();
+      
+      if (data.success) {
+        setGames(data.data);
+      } else {
+        setError('Failed to fetch games');
+      }
+    } catch (err) {
+      setError('Error connecting to server');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load games on component mount
+  useEffect(() => {
+    fetchGames();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isThumb: boolean) => {
     const file = e.target.files?.[0];
@@ -102,23 +152,122 @@ export default function AdminDashboard() {
     }));
   };
 
-  const handleAddGame = () => {
-    const newGameItem = {
-      id: String(Date.now()),
-      title: newGame.title,
-      price: parseFloat(newGame.price),
-      description: newGame.description,
-      thumbnail: newGame.thumbnail,
-      images: newGame.images
-    };
-    setGames([...games, newGameItem]);
-    setNewGame({ title: '', price: '', description: '' });
-    setOpenAddGame(false);
+  const handleAddGame = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Validate required fields
+      if (!newGame.title || !newGame.description || !newGame.price || 
+          !newGame.releaseDate || !newGame.genre.length || !newGame.platform.length ||
+          !newGame.developer || !newGame.publisher || !newGame.rating || !newGame.stock) {
+        setError('Please fill in all required fields');
+        setLoading(false);
+        return;
+      }
+      
+      // Format the data according to backend model requirements
+      const gameData = {
+        title: newGame.title,
+        description: newGame.description,
+        price: parseFloat(newGame.price),
+        releaseDate: new Date(newGame.releaseDate).toISOString(),
+        genre: newGame.genre,
+        platform: newGame.platform,
+        developer: newGame.developer,
+        publisher: newGame.publisher,
+        rating: newGame.rating,
+        stock: parseInt(newGame.stock || '0'),
+        images: newGame.thumbnail ? [newGame.thumbnail, ...newGame.images] : ['default.jpg']
+      };
+
+      console.log('Sending game data:', gameData);
+      console.log('Using token:', token);
+
+      // Send data to the backend
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(gameData),
+        credentials: 'include' // Include cookies
+      });
+
+      const data = await response.json();
+      console.log('Server response:', data);
+
+      if (data.success) {
+        // Add the new game to the state
+        setGames([...games, data.data]);
+        setSuccess('Game added successfully!');
+        
+        // Reset form
+        setNewGame({
+          title: '',
+          price: '',
+          description: '',
+          genre: [],
+          platform: [],
+          developer: '',
+          publisher: '',
+          releaseDate: '',
+          rating: '',
+          stock: '',
+          images: [],
+          thumbnail: ''
+        });
+        setOpenAddGame(false);
+      } else {
+        setError(data.message || 'Failed to add game');
+      }
+    } catch (err) {
+      console.error('Error adding game:', err);
+      setError('Error connecting to server');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRemoveGame = (gameId: string) => {
-    setGames(games.filter(game => game.id !== gameId));
+  const handleRemoveGame = async (gameId: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`/api/games/${gameId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the game from the state
+        setGames(games.filter(game => game._id !== gameId));
+        setSuccess('Game removed successfully!');
+      } else {
+        setError(data.message || 'Failed to remove game');
+      }
+    } catch (err) {
+      setError('Error connecting to server');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Available genres and platforms from the backend model
+  const availableGenres = [
+    'Action', 'Adventure', 'RPG', 'Strategy', 'Simulation', 
+    'Sports', 'Racing', 'Puzzle', 'FPS', 'Fighting', 
+    'Platformer', 'Survival', 'Horror', 'Stealth', 'Open World'
+  ];
+
+  const availablePlatforms = ['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Mobile'];
+  
+  const availableRatings = ['E', 'E10+', 'T', 'M', 'A'];
 
   if (!isAdmin()) {
     return <Typography>Access Denied</Typography>;
@@ -127,6 +276,19 @@ export default function AdminDashboard() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
+      
+      {/* Notifications */}
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
+        <Alert onClose={() => setError(null)} severity="error">
+          {error}
+        </Alert>
+      </Snackbar>
+      
+      <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess(null)}>
+        <Alert onClose={() => setSuccess(null)} severity="success">
+          {success}
+        </Alert>
+      </Snackbar>
       
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
@@ -146,18 +308,27 @@ export default function AdminDashboard() {
             Add New Game
           </Button>
 
+          {loading && <CircularProgress />}
+
           <Grid container spacing={2}>
             {games.map((game) => (
-              <Grid item xs={12} key={game.id}>
+              <Grid item xs={12} key={game._id}>
                 <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Box>
                     <Typography variant="h6">{game.title}</Typography>
                     <Typography color="text.secondary">${game.price}</Typography>
+                    {game.genre && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                        {game.genre.map(g => (
+                          <Chip key={g} label={g} size="small" />
+                        ))}
+                      </Box>
+                    )}
                   </Box>
                   <Button
                     variant="outlined"
                     color="error"
-                    onClick={() => handleRemoveGame(game.id)}
+                    onClick={() => handleRemoveGame(game._id)}
                   >
                     Remove Game
                   </Button>
@@ -166,7 +337,7 @@ export default function AdminDashboard() {
             ))}
           </Grid>
           
-          <Dialog open={openAddGame} onClose={() => setOpenAddGame(false)}>
+          <Dialog open={openAddGame} onClose={() => setOpenAddGame(false)} maxWidth="md" fullWidth>
             <DialogTitle>Add New Game</DialogTitle>
             <DialogContent>
               <TextField
@@ -222,40 +393,75 @@ export default function AdminDashboard() {
                 value={newGame.releaseDate}
                 onChange={(e) => setNewGame({...newGame, releaseDate: e.target.value})}
               />
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Genre</InputLabel>
+                <Select
+                  multiple
+                  value={newGame.genre}
+                  onChange={(e) => setNewGame({...newGame, genre: e.target.value as string[]})}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {availableGenres.map((genre) => (
+                    <MenuItem key={genre} value={genre}>
+                      {genre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Platform</InputLabel>
+                <Select
+                  multiple
+                  value={newGame.platform}
+                  onChange={(e) => setNewGame({...newGame, platform: e.target.value as string[]})}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {availablePlatforms.map((platform) => (
+                    <MenuItem key={platform} value={platform}>
+                      {platform}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>ESRB Rating</InputLabel>
+                <Select
+                  value={newGame.rating}
+                  onChange={(e) => setNewGame({...newGame, rating: e.target.value})}
+                >
+                  {availableRatings.map((rating) => (
+                    <MenuItem key={rating} value={rating}>
+                      {rating}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
               <TextField
                 margin="dense"
-                label="Installation Tutorial URL"
+                label="Stock"
+                type="number"
                 fullWidth
                 variant="outlined"
-                value={newGame.tutorialUrl}
-                onChange={(e) => setNewGame({...newGame, tutorialUrl: e.target.value})}
+                value={newGame.stock}
+                onChange={(e) => setNewGame({...newGame, stock: e.target.value})}
               />
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle1">Installation Guide (PDF)</Typography>
-                <input
-                  accept="application/pdf"
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setNewGame({...newGame, installationGuide: file});
-                    }
-                  }}
-                />
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle1">Game Manual (PDF)</Typography>
-                <input
-                  accept="application/pdf"
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setNewGame({...newGame, gameManual: file});
-                    }
-                  }}
-                />
-              </Box>
+              
               <TextField
                 margin="dense"
                 label="System Requirements"
@@ -312,7 +518,13 @@ export default function AdminDashboard() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenAddGame(false)}>Cancel</Button>
-              <Button onClick={handleAddGame} variant="contained">Add Game</Button>
+              <Button 
+                onClick={handleAddGame} 
+                variant="contained" 
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : 'Add Game'}
+              </Button>
             </DialogActions>
           </Dialog>
         </Box>

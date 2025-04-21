@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box,
@@ -20,6 +19,9 @@ import {
   Avatar,
   Card,
   CardContent,
+  Snackbar,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import {
   Favorite,
@@ -32,6 +34,9 @@ import {
   Memory,
   PhoneAndroid,
 } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 // Temporary game data - would be fetched from API in real app
 const MOCK_GAMES = [
@@ -139,7 +144,12 @@ export default function GameDetailsPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState<number | null>(null);
-  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  
+  // Context hooks
+  const { user } = useAuth();
+  const { addToCart, loading: cartLoading } = useCart();
+  const { wishlist, addToWishlist, removeFromWishlist, isInWishlist, loading: wishlistLoading } = useWishlist();
   
   // Find game by ID
   const game = MOCK_GAMES.find(game => game.id === Number(id)) || MOCK_GAMES[0];
@@ -155,12 +165,81 @@ export default function GameDetailsPage() {
     setReviewRating(null);
   };
   
-  const toggleWishlist = () => {
-    setIsInWishlist(!isInWishlist);
+  const handleAddToCart = async () => {
+    if (!user) {
+      setNotification({
+        type: 'error',
+        message: 'Please login to add items to your cart'
+      });
+      return;
+    }
+    
+    try {
+      await addToCart(game.id.toString(), 1);
+      setNotification({
+        type: 'success',
+        message: 'Game added to cart successfully!'
+      });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to add game to cart'
+      });
+    }
+  };
+  
+  const toggleWishlist = async () => {
+    if (!user) {
+      setNotification({
+        type: 'error',
+        message: 'Please login to use wishlist'
+      });
+      return;
+    }
+    
+    try {
+      const gameId = game.id.toString();
+      if (isInWishlist(gameId)) {
+        await removeFromWishlist(gameId);
+        setNotification({
+          type: 'success',
+          message: 'Game removed from wishlist'
+        });
+      } else {
+        await addToWishlist(gameId);
+        setNotification({
+          type: 'success',
+          message: 'Game added to wishlist'
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to update wishlist'
+      });
+    }
+  };
+  
+  const closeNotification = () => {
+    setNotification(null);
   };
   
   return (
     <Box>
+      {/* Notification */}
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {notification && (
+          <Alert onClose={closeNotification} severity={notification.type}>
+            {notification.message}
+          </Alert>
+        )}
+      </Snackbar>
+      
       {/* Game Title and Basic Info */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -252,20 +331,30 @@ export default function GameDetailsPage() {
               <Button 
                 variant="contained" 
                 size="large" 
-                startIcon={<ShoppingCart />}
+                startIcon={cartLoading ? <CircularProgress size={20} color="inherit" /> : <ShoppingCart />}
                 fullWidth
+                onClick={handleAddToCart}
+                disabled={cartLoading}
               >
-                Add to Cart
+                {cartLoading ? 'Adding...' : 'Add to Cart'}
               </Button>
               
               <Button 
                 variant="outlined" 
                 size="large" 
-                startIcon={isInWishlist ? <Favorite /> : <FavoriteBorder />}
+                startIcon={wishlistLoading ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  isInWishlist(game.id.toString()) ? <Favorite /> : <FavoriteBorder />
+                )}
                 onClick={toggleWishlist}
+                disabled={wishlistLoading}
                 fullWidth
               >
-                {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+                {wishlistLoading 
+                  ? 'Processing...' 
+                  : (isInWishlist(game.id.toString()) ? 'In Wishlist' : 'Add to Wishlist')
+                }
               </Button>
               
               <Button 

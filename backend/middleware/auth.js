@@ -29,10 +29,20 @@ exports.protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Add user to request
-    req.user = await User.findById(decoded.id);
-
+    const user = await User.findById(decoded.id);
+    
+    // Check if user exists
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or no longer exists'
+      });
+    }
+    
+    req.user = user;
     next();
   } catch (err) {
+    console.error('Token verification error:', err.message);
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
@@ -43,6 +53,13 @@ exports.protect = async (req, res, next) => {
 // Grant access to specific roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found in the request'
+      });
+    }
+    
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Container,
@@ -13,70 +13,147 @@ import {
   List,
   ListItem,
   ListItemText,
-  Card,
   CardMedia,
-  CardContent,
   RadioGroup,
   Radio,
   FormControlLabel,
-  Alert
+  Alert,
+  CircularProgress,
+  Snackbar
 } from '@mui/material';
 import { Add, Remove, Delete, ShoppingBag } from '@mui/icons-material';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState(MOCK_CART_ITEMS);
+  const { user } = useAuth();
+  const { cart, updateCartItem, removeCartItem, clearCart, loading } = useCart();
+  
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [cardNumber, setCardNumber] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
   const handlePayment = async () => {
     setProcessing(true);
     // Implement actual payment processing here
     setTimeout(() => {
       setProcessing(false);
-      alert('Payment successful!');
+      setNotification({
+        type: 'success',
+        message: 'Payment successful!'
+      });
     }, 2000);
   };
 
-  const updateQuantity = (id: number, newQuantity: number) => {
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    
+    try {
+      await updateCartItem(itemId, newQuantity);
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to update item quantity'
+      });
+    }
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await removeCartItem(itemId);
+      setNotification({
+        type: 'success',
+        message: 'Item removed from cart'
+      });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to remove item from cart'
+      });
+    }
+  };
+
+  const handleClearCart = async () => {
+    try {
+      await clearCart();
+      setNotification({
+        type: 'success',
+        message: 'Cart cleared successfully'
+      });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Failed to clear cart'
+      });
+    }
   };
 
   const applyPromoCode = () => {
     if (promoCode.toLowerCase() === 'cse15') {
       setPromoApplied(true);
       setPromoDiscount(20);
-      alert('Promo code applied: 20% discount!');
+      setNotification({
+        type: 'success',
+        message: 'Promo code applied: 20% discount!'
+      });
     } else {
-      alert('Invalid promo code.');
+      setNotification({
+        type: 'error',
+        message: 'Invalid promo code'
+      });
     }
   };
 
+  const closeNotification = () => {
+    setNotification(null);
+  };
+
   // Calculate totals
-  const subtotal = cartItems.reduce((total, item) => {
-    const price = item.discountPrice || item.price;
-    return total + price * item.quantity;
+  const subtotal = cart.items.reduce((total, item) => {
+    return total + item.price * item.quantity;
   }, 0);
 
   const discountAmount = promoApplied ? (subtotal * promoDiscount / 100) : 0;
   const tax = (subtotal - discountAmount) * 0.07; // 7% tax
   const total = subtotal - discountAmount + tax;
 
+  if (!user) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography variant="h5" gutterBottom>
+          Please login to view your cart
+        </Typography>
+        <Button 
+          variant="contained" 
+          component={Link} 
+          to="/login"
+          sx={{ mt: 2 }}
+        >
+          Go to Login
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg">
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {notification && (
+          <Alert onClose={closeNotification} severity={notification.type}>
+            {notification.message}
+          </Alert>
+        )}
+      </Snackbar>
+
       <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
         Shopping Cart
       </Typography>
@@ -110,25 +187,29 @@ export default function CartPage() {
         )}
       </Box>
 
-      {cartItems.length > 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : cart.items.length > 0 ? (
         <Grid container spacing={3}>
           {/* Cart Items */}
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 2, mb: 3 }}>
-              {cartItems.map((item) => (
-                <Box key={item.id}>
+              {cart.items.map((item) => (
+                <Box key={item._id}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={3} sm={2}>
                       <CardMedia
                         component="img"
-                        image={item.image}
-                        alt={item.title}
+                        image={item.game.images[0] || 'https://via.placeholder.com/300x200?text=Game+Image'}
+                        alt={item.game.title}
                         sx={{ borderRadius: 1 }}
                       />
                     </Grid>
                     <Grid item xs={9} sm={4}>
-                      <Typography variant="subtitle1" component={Link} to={`/game/${item.id}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
-                        {item.title}
+                      <Typography variant="subtitle1" component={Link} to={`/game/${item.game._id}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                        {item.game.title}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Digital Download
@@ -138,7 +219,8 @@ export default function CartPage() {
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <IconButton 
                           size="small" 
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
+                          disabled={loading}
                         >
                           <Remove fontSize="small" />
                         </IconButton>
@@ -147,37 +229,40 @@ export default function CartPage() {
                           size="small"
                           type="number"
                           InputProps={{ inputProps: { min: 1, max: 99 } }}
-                          onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                          onChange={(e) => handleUpdateQuantity(item._id, parseInt(e.target.value) || 1)}
                           sx={{ width: '60px', mx: 1 }}
+                          disabled={loading}
                         />
                         <IconButton 
                           size="small"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
+                          disabled={loading}
                         >
                           <Add fontSize="small" />
                         </IconButton>
                       </Box>
                     </Grid>
                     <Grid item xs={4} sm={2} sx={{ textAlign: 'right' }}>
-                      {item.discountPrice ? (
+                      {item.game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ${item.price.toFixed(2)}
+                            ${item.game.price.toFixed(2)}
                           </Typography>
                           <Typography variant="subtitle1" color="error.main">
-                            ${item.discountPrice.toFixed(2)}
+                            ${item.game.discountPrice.toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="subtitle1">
-                          ${item.price.toFixed(2)}
+                          ${item.game.price.toFixed(2)}
                         </Typography>
                       )}
                     </Grid>
                     <Grid item xs={2} sm={1} sx={{ textAlign: 'right' }}>
                       <IconButton 
                         color="error" 
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => handleRemoveItem(item._id)}
+                        disabled={loading}
                       >
                         <Delete />
                       </IconButton>
@@ -199,7 +284,8 @@ export default function CartPage() {
                 <Button 
                   variant="outlined" 
                   color="error"
-                  onClick={() => setCartItems([])}
+                  onClick={handleClearCart}
+                  disabled={loading}
                 >
                   Clear Cart
                 </Button>
@@ -309,23 +395,3 @@ export default function CartPage() {
     </Container>
   );
 }
-
-// Mock data for cart items
-const MOCK_CART_ITEMS = [
-  {
-    id: 1,
-    title: 'Cyber Adventure 2077',
-    price: 59.99,
-    discountPrice: 49.99,
-    image: 'https://via.placeholder.com/300x200?text=Cyber+Adventure',
-    quantity: 1
-  },
-  {
-    id: 5,
-    title: 'Racing Evolution',
-    price: 49.99,
-    discountPrice: 34.99,
-    image: 'https://via.placeholder.com/300x200?text=Racing+Evolution',
-    quantity: 1
-  }
-];

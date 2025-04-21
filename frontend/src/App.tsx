@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminRoute } from './components/AdminRoute';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -22,6 +21,8 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import SupportPage from './pages/SupportPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import './App.css';
 
 const theme = createTheme({
@@ -51,45 +52,49 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <div className="app-container">
-          <Header />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/game/:id" element={<GameDetailsPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/profile" element={
-                <AdminRoute>
-                  <ProfilePage />
-                </AdminRoute>
-              } />
-              <Route path="/wishlist" element={<WishlistPage />} />
-              <Route path="/order-history" element={
-                <AdminRoute>
-                  <OrderHistoryPage />
-                </AdminRoute>
-              } />
-              <Route path="/admin-dashboard" element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              } />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/faq" element={<FAQPage />} />
-              <Route path="/shipping" element={<ShippingInfoPage />} />
-              <Route path="/returns" element={<ReturnsRefundsPage />} />
-              <Route path="/privacy" element={<PrivacyPolicyPage />} />
-              <Route path="/support" element={<SupportPage />} />
-              <Route path="/help-center" element={<HelpCenterPage />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-        </ThemeProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <div className="app-container">
+                <Header />
+                <main className="main-content">
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/game/:id" element={<GameDetailsPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/profile" element={
+                      <AdminRoute>
+                        <ProfilePage />
+                      </AdminRoute>
+                    } />
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/order-history" element={
+                      <AdminRoute>
+                        <OrderHistoryPage />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin-dashboard" element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    } />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/faq" element={<FAQPage />} />
+                    <Route path="/shipping" element={<ShippingInfoPage />} />
+                    <Route path="/returns" element={<ReturnsRefundsPage />} />
+                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                    <Route path="/support" element={<SupportPage />} />
+                    <Route path="/help-center" element={<HelpCenterPage />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            </ThemeProvider>
+          </WishlistProvider>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
