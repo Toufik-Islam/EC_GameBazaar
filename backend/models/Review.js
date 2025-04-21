@@ -1,5 +1,42 @@
 const mongoose = require('mongoose');
 
+// Create a nested reply schema that doesn't reference itself
+const NestedReplySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  comment: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Create the main reply schema with nested replies
+const ReplySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  comment: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  nestedReplies: [NestedReplySchema],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const ReviewSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -28,24 +65,7 @@ const ReviewSchema = new mongoose.Schema({
       ref: 'User'
     }
   ],
-  replies: [
-    {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-      },
-      comment: {
-        type: String,
-        required: true,
-        trim: true
-      },
-      createdAt: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
+  replies: [ReplySchema],
   createdAt: {
     type: Date,
     default: Date.now
