@@ -150,7 +150,7 @@ export default function GameDetailsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editReviewId, setEditReviewId] = useState<string | null>(null);
   const [editReviewText, setEditReviewText] = useState('');
-  const [editReviewRating, setEditReviewRating] = useState<number | null>(null);
+  const [editReviewRating, setEditReviewRating] =useState<number | null>(null);
   
   // Context hooks
   const { user } = useAuth();
@@ -822,28 +822,7 @@ export default function GameDetailsPage() {
             
             <Divider sx={{ my: 3 }} />
             
-            <Typography variant="h6" gutterBottom>
-              Download Resources
-            </Typography>
-            
-            <List disablePadding>
-              <ListItem disablePadding sx={{ pb: 1 }}>
-                <Button 
-                  startIcon={<FileDownload />} 
-                  variant="text" 
-                  component="a" 
-                  href="#"
-                  target="_blank"
-                >
-                  Installation Guide (PDF)
-                </Button>
-              </ListItem>
-              <ListItem disablePadding>
-                <Button startIcon={<FileDownload />} variant="text">
-                  Game Manual
-                </Button>
-              </ListItem>
-            </List>
+            {/* Download Resources section removed as requested */}
           </Paper>
         </Grid>
       </Grid>
