@@ -47,7 +47,7 @@ export default function HomePage() {
   const saleFilter = searchParams.get('sale') || '';
   
   const [games, setGames] = useState<any[]>([]);
-  const [sortBy, setSortBy] = useState('featured');
+  const [sortBy, setSortBy] = useState('newest');
   const [priceRange, setPriceRange] = useState<number[]>([0, 100000]);
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesPerPage] = useState(6);
@@ -170,8 +170,13 @@ export default function HomePage() {
     
     // Apply search filter
     if (searchQuery) {
+      // Create a case-insensitive regex for starting with the query string
+      const regex = new RegExp(`^${searchQuery}`, 'i');
+      
       filteredGames = filteredGames.filter(game => 
-        game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        // Check if title starts with search query
+        regex.test(game.title) ||
+        // Fallback to includes() for publisher to keep some backward compatibility
         (game.publisher && game.publisher.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
@@ -247,7 +252,7 @@ export default function HomePage() {
     
     // Update URL to reflect sort option for shareable URLs and browser history
     const newParams = new URLSearchParams(location.search);
-    if (newSortBy !== 'featured') {
+    if (newSortBy !== 'newest') {
       newParams.set('sort', newSortBy);
     } else {
       newParams.delete('sort');
@@ -323,7 +328,7 @@ export default function HomePage() {
         <Typography variant="h4" component="h1">
           {categoryFilter 
             ? `${categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)} Games` 
-            : (searchQuery ? `Search Results for "${searchQuery}"` : 'Featured Games')}
+            : (searchQuery ? `Search Results for "${searchQuery}"` : 'Newest Games')}
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -418,9 +423,16 @@ export default function HomePage() {
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating value={4} precision={0.5} size="small" readOnly />
+                    <Rating 
+                      value={game.averageRating || 0} 
+                      precision={0.5} 
+                      size="small" 
+                      readOnly 
+                    />
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      (4.0)
+                      {game.numReviews > 0 
+                        ? `(${game.averageRating?.toFixed(1) || '0.0'}) ${game.numReviews} ${game.numReviews === 1 ? 'review' : 'reviews'}`
+                        : '(No reviews yet)'}
                     </Typography>
                   </Box>
                   

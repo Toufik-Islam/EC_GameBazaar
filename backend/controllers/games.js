@@ -263,3 +263,41 @@ exports.getGamesByCategory = async (req, res) => {
     });
   }
 };
+
+// @desc    Search games by title prefix for auto-suggestion
+// @route   GET /api/games/search/suggestions
+// @access  Public
+exports.getGameSuggestions = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: []
+      });
+    }
+
+    // Create case-insensitive regex for starting with the query string
+    const regex = new RegExp(`^${query}`, 'i');
+    
+    // Find games with titles that match the regex
+    // Return more results (up to 20) to support the expanded scrollable dropdown
+    // Only return the necessary fields for the suggestions dropdown
+    const games = await Game.find({ title: regex })
+      .select('_id title thumbnail price discountPrice')
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      count: games.length,
+      data: games
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};

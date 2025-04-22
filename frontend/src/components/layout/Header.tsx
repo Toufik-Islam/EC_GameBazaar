@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -23,7 +23,11 @@ import {
   FormControl,
   Select,
   InputLabel,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Paper,
+  Avatar,
+  ClickAwayListener,
+  CircularProgress
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
@@ -38,6 +42,15 @@ import {
   Person
 } from '@mui/icons-material';
 import { styled, alpha } from '@mui/material/styles';
+import debounce from 'lodash.debounce';
+
+interface GameSuggestion {
+  _id: string;
+  title: string;
+  thumbnail: string;
+  price: number;
+  discountPrice?: number;
+}
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -67,14 +80,42 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
+  width: '100%',
   '& .MuiInputBase-input': {
     padding: theme.spacing(1, 1, 1, 0),
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('md')]: {
-      width: '20ch',
+      width: '40ch',
     },
+  },
+}));
+
+// Styled suggestions dropdown
+const SuggestionsDropdown = styled(Paper)(({ theme }) => ({
+  position: 'absolute',
+  zIndex: 1201, // Increased z-index to appear above the Select component
+  marginTop: theme.spacing(1),
+  left: 0,
+  right: 0,
+  maxHeight: '350px', // Increased height for better scrollability
+  overflow: 'auto',
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[3],
+  '&::-webkit-scrollbar': {
+    width: '8px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: '#f1f1f1',
+    borderRadius: '4px',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#888',
+    borderRadius: '4px',
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: '#555',
   },
 }));
 
@@ -87,10 +128,57 @@ export default function Header() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<GameSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const { user } = useAuth();
   const isLoggedIn = !!user;
   const cartItemCount = 0;
+
+  // Fetch game suggestions based on search query
+  const fetchSuggestions = async (query: string) => {
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/games/search/suggestions?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuggestions(data.data);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounce the fetchSuggestions function to avoid too many API calls
+  const debouncedFetchSuggestions = debounce(fetchSuggestions, 300);
+
+  // Update suggestions when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      debouncedFetchSuggestions(searchQuery);
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+
+    // Cleanup debounce on unmount
+    return () => {
+      debouncedFetchSuggestions.cancel();
+    };
+  }, [searchQuery]);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -107,8 +195,19 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/?search=${searchQuery}`);
+      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+      setShowSuggestions(false);
     }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleSuggestionClick = (gameId: string) => {
+    navigate(`/game/${gameId}`);
+    setShowSuggestions(false);
+    setSearchQuery('');
   };
 
   const categories = [
@@ -200,21 +299,106 @@ export default function Header() {
             Game Bazaar
           </Typography>
 
-          <form onSubmit={handleSearch} style={{ flexGrow: 1 }}>
-            <Search>
-              <SearchIconWrapper>
-                <SearchIcon />
-              </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search games…"
-                inputProps={{ 'aria-label': 'search' }}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </Search>
-          </form>
+          <Box sx={{ flexGrow: 1, position: 'relative', ml: 2, mr: 2 }}>
+            <form onSubmit={handleSearch}>
+              <Search>
+                <SearchIconWrapper>
+                  <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="Search games…"
+                  inputProps={{ 'aria-label': 'search games' }}
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => setShowSuggestions(true)}
+                />
+                {loading && (
+                  <Box sx={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                    <CircularProgress size={20} color="inherit" />
+                  </Box>
+                )}
+              </Search>
+            </form>
 
-          <FormControl sx={{ minWidth: 120, mr: 2 }}>
+            {/* Suggestions Dropdown */}
+            {showSuggestions && (
+              <ClickAwayListener onClickAway={() => setShowSuggestions(false)}>
+                <SuggestionsDropdown>
+                  {suggestions.length > 0 ? (
+                    suggestions.map(game => (
+                      <MenuItem 
+                        key={game._id} 
+                        onClick={() => handleSuggestionClick(game._id)}
+                        sx={{ py: 1 }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Avatar 
+                            src={game.thumbnail} 
+                            alt={game.title}
+                            variant="square"
+                            sx={{ width: 40, height: 40, mr: 2 }}
+                          />
+                          <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                            <Typography variant="body1">{game.title}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              {game.discountPrice ? (
+                                <>
+                                  <Typography 
+                                    variant="body2" 
+                                    color="error"
+                                    sx={{ mr: 1 }}
+                                  >
+                                    ${game.discountPrice.toFixed(2)}
+                                  </Typography>
+                                  <Typography 
+                                    variant="body2" 
+                                    color="text.secondary"
+                                    sx={{ textDecoration: 'line-through' }}
+                                  >
+                                    ${game.price.toFixed(2)}
+                                  </Typography>
+                                </>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  ${game.price.toFixed(2)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  ) : (
+                    searchQuery.length > 0 && !loading && (
+                      <MenuItem disabled>
+                        <Typography variant="body2">No games found</Typography>
+                      </MenuItem>
+                    )
+                  )}
+                  {searchQuery.length > 0 && suggestions.length > 0 && (
+                    <MenuItem 
+                      onClick={() => {
+                        navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+                        setShowSuggestions(false);
+                      }}
+                      sx={{ 
+                        borderTop: '1px solid', 
+                        borderColor: 'divider',
+                        justifyContent: 'center',
+                        py: 1
+                      }}
+                    >
+                      <Typography variant="body2" color="primary">
+                        View all results for "{searchQuery}"
+                      </Typography>
+                    </MenuItem>
+                  )}
+                </SuggestionsDropdown>
+              </ClickAwayListener>
+            )}
+          </Box>
+
+          <FormControl sx={{ minWidth: 120, mr: 2, display: { xs: 'none', md: 'block' } }}>
             <Select
               value=""
               displayEmpty
