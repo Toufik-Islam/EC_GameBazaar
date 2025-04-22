@@ -31,21 +31,9 @@ import {
 } from '@mui/material';
 import { Delete, Edit } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { gameEvents } from '../services/events';
 
-// Create a simple event system to notify other components when games are changed
-export const gameEvents = {
-  listeners: new Set<() => void>(),
-  
-  subscribe(listener: () => void) {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  },
-  
-  emit() {
-    this.listeners.forEach(listener => listener());
-  }
-};
-
+// Interface definitions
 interface Game {
   _id: string;
   title: string;

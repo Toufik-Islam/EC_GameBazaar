@@ -28,7 +28,7 @@ import { Favorite, FavoriteBorder, ShoppingCart, Refresh } from '@mui/icons-mate
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { gameEvents } from './AdminDashboard';
+import { gameEvents } from '../services/events';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -48,7 +48,7 @@ export default function HomePage() {
   
   const [games, setGames] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('featured');
-  const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
+  const [priceRange, setPriceRange] = useState<number[]>([0, 100000]);
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesPerPage] = useState(6);
   const [loading, setLoading] = useState(false);
@@ -80,8 +80,14 @@ export default function HomePage() {
         apiParams.append('genre', formattedCategory);
       }
       
+      // Use specific endpoint for sale games
       if (saleFilter) {
         url = '/api/games/sale';
+      }
+      
+      // Use specific endpoint for featured games when no other filters are applied
+      if (!searchQuery && !categoryFilter && !saleFilter && sortBy === 'featured') {
+        url = '/api/games/featured';
       }
       
       // Add query parameters if any exist
@@ -140,7 +146,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, categoryFilter, saleFilter]);
+  }, [searchQuery, categoryFilter, saleFilter, sortBy]);
   
   // Fetch games on component mount, when relevant parameters change, or when game data is updated
   useEffect(() => {
