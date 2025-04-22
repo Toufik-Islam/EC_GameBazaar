@@ -766,16 +766,16 @@ export default function GameDetailsPage() {
               {game.discountPrice ? (
                 <>
                   <Typography variant="body1" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                    ${game.price.toFixed(2)}
+                    ৳{game.price.toFixed(2)}
                   </Typography>
                   <Typography variant="h4" color="error.main">
-                    ${game.discountPrice.toFixed(2)}
+                    ৳{game.discountPrice.toFixed(2)}
                   </Typography>
                   <Chip label="Sale" color="error" size="small" sx={{ mt: 1 }} />
                 </>
               ) : (
                 <Typography variant="h4">
-                  ${game.price.toFixed(2)}
+                  ৳{game.price.toFixed(2)}
                 </Typography>
               )}
             </Box>

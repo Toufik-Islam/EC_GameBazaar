@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Container, Typography, Paper, Box, Grid, Divider } from '@mui/material';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
@@ -27,7 +26,7 @@ export default function ShippingInfoPage() {
                 Delivery within 5-7 business days. Available for all products to most locations.
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Cost: $4.99 or FREE for orders over $35
+                Cost: ৳4.99 or FREE for orders over ৳35
               </Typography>
             </Box>
           </Grid>
@@ -39,7 +38,7 @@ export default function ShippingInfoPage() {
                 Delivery within 2-3 business days. Available for most products to major cities.
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Cost: $9.99
+                Cost: ৳9.99
               </Typography>
             </Box>
           </Grid>
@@ -51,7 +50,7 @@ export default function ShippingInfoPage() {
                 Order by 2PM for delivery the next business day. Limited to select areas.
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Cost: $14.99
+                Cost: ৳14.99
               </Typography>
             </Box>
           </Grid>

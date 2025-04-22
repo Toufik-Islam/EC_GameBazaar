@@ -368,7 +368,7 @@ export default function HomePage() {
         
         <Box sx={{ width: 300, ml: isMobile ? 0 : 2 }}>
           <Typography id="price-range-slider" gutterBottom>
-            Price Range: ${priceRange[0]} - ${priceRange[1]}
+            Price Range: ৳{priceRange[0]} - ৳{priceRange[1]}
           </Typography>
           <Slider
             value={priceRange}
@@ -457,15 +457,15 @@ export default function HomePage() {
                       {game.discountPrice > 0 ? (
                         <>
                           <Typography variant="body1" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ${game.price.toFixed(2)}
+                            ৳{game.price.toFixed(2)}
                           </Typography>
                           <Typography variant="h6" color="error.main">
-                            ${game.discountPrice.toFixed(2)}
+                            ৳{game.discountPrice.toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="h6">
-                          ${game.price.toFixed(2)}
+                          ৳{game.price.toFixed(2)}
                         </Typography>
                       )}
                     </Box>

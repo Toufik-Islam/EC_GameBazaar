@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -183,7 +182,7 @@ export default function OrderHistoryPage() {
                 </Grid>
                 <Grid item xs={6} sm={3}>
                   <Typography variant="subtitle1">
-                    ${order.total.toFixed(2)}
+                    ৳{order.total.toFixed(2)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
@@ -217,7 +216,7 @@ export default function OrderHistoryPage() {
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Total Amount</Typography>
-                    <Typography variant="body1">${order.total.toFixed(2)}</Typography>
+                    <Typography variant="body1">৳{order.total.toFixed(2)}</Typography>
                   </Grid>
                 </Grid>
                 
@@ -252,7 +251,7 @@ export default function OrderHistoryPage() {
                               </Typography>
                             </Box>
                           </TableCell>
-                          <TableCell>${item.price.toFixed(2)}</TableCell>
+                          <TableCell>৳{item.price.toFixed(2)}</TableCell>
                           <TableCell align="right">
                             <Button
                               size="small"

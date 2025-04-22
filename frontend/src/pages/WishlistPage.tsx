@@ -157,15 +157,15 @@ export default function WishlistPage() {
                       {game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ${game.price.toFixed(2)}
+                            ৳{game.price.toFixed(2)}
                           </Typography>
                           <Typography variant="h6" color="error.main">
-                            ${game.discountPrice.toFixed(2)}
+                            ৳{game.discountPrice.toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="h6">
-                          ${game.price.toFixed(2)}
+                          ৳{game.price.toFixed(2)}
                         </Typography>
                       )}
                     </Box>

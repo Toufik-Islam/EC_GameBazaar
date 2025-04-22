@@ -246,15 +246,15 @@ export default function CartPage() {
                       {item.game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ${item.game.price.toFixed(2)}
+                            ৳{item.game.price.toFixed(2)}
                           </Typography>
                           <Typography variant="subtitle1" color="error.main">
-                            ${item.game.discountPrice.toFixed(2)}
+                            ৳{item.game.discountPrice.toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="subtitle1">
-                          ${item.game.price.toFixed(2)}
+                          ৳{item.game.price.toFixed(2)}
                         </Typography>
                       )}
                     </Grid>
@@ -334,28 +334,28 @@ export default function CartPage() {
               <List disablePadding>
                 <ListItem sx={{ py: 1, px: 0 }}>
                   <ListItemText primary="Subtotal" />
-                  <Typography variant="body1">${subtotal.toFixed(2)}</Typography>
+                  <Typography variant="body1">৳{subtotal.toFixed(2)}</Typography>
                 </ListItem>
 
                 {promoApplied && (
                   <ListItem sx={{ py: 1, px: 0 }}>
                     <ListItemText primary={`Discount (${promoDiscount}%)`} />
                     <Typography variant="body1" color="error.main">
-                      -${discountAmount.toFixed(2)}
+                      -৳{discountAmount.toFixed(2)}
                     </Typography>
                   </ListItem>
                 )}
 
                 <ListItem sx={{ py: 1, px: 0 }}>
                   <ListItemText primary="Tax (7%)" />
-                  <Typography variant="body1">${tax.toFixed(2)}</Typography>
+                  <Typography variant="body1">৳{tax.toFixed(2)}</Typography>
                 </ListItem>
 
                 <Divider />
 
                 <ListItem sx={{ py: 1, px: 0 }}>
                   <ListItemText primary="Total" />
-                  <Typography variant="h6">${total.toFixed(2)}</Typography>
+                  <Typography variant="h6">৳{total.toFixed(2)}</Typography>
                 </ListItem>
               </List>
 
