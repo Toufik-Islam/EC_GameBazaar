@@ -19,11 +19,27 @@ import {
   FormControlLabel,
   Alert,
   CircularProgress,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
-import { Add, Remove, Delete, ShoppingBag } from '@mui/icons-material';
+import { Add, Remove, Delete, ShoppingBag, Download, CheckCircle } from '@mui/icons-material';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+// Import jsPDF and jspdf-autotable correctly
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+// Add explicit type augmentation for jsPDF
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => any;
+    lastAutoTable?: {
+      finalY: number;
+    };
+  }
+}
 
 export default function CartPage() {
   const { user } = useAuth();
@@ -36,17 +52,452 @@ export default function CartPage() {
   const [cardNumber, setCardNumber] = useState('');
   const [processing, setProcessing] = useState(false);
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  // Add state for the success dialog
+  const [paymentSuccessDialog, setPaymentSuccessDialog] = useState(false);
+  // Add state for the order ID
+  const [orderId, setOrderId] = useState('');
+
+  // Generate a random order ID
+  const generateOrderId = () => {
+    const timestamp = new Date().getTime();
+    const randomNum = Math.floor(Math.random() * 1000);
+    return `ORD-${timestamp}-${randomNum}`;
+  };
 
   const handlePayment = async () => {
-    setProcessing(true);
-    // Implement actual payment processing here
-    setTimeout(() => {
-      setProcessing(false);
+    // Check if card number has been entered
+    if (!cardNumber.trim()) {
       setNotification({
-        type: 'success',
-        message: 'Payment successful!'
+        type: 'error',
+        message: 'Please enter a card number'
       });
-    }, 2000);
+      return;
+    }
+
+    setProcessing(true);
+    
+    // Generate a random order ID for the receipt
+    const newOrderId = generateOrderId();
+    setOrderId(newOrderId);
+    
+    // Simulate payment processing (1 second delay)
+    setTimeout(async () => {
+      try {
+        // First generate and download the receipt before clearing the cart
+        generatePDF();
+        
+        // Wait a bit to ensure PDF is generated before clearing cart
+        setTimeout(async () => {
+          // Then clear the cart after successful payment
+          await clearCart();
+          
+          setProcessing(false);
+          // Show success dialog
+          setPaymentSuccessDialog(true);
+          setNotification({
+            type: 'success',
+            message: 'Payment successful! Your order has been placed and receipt downloaded.'
+          });
+        }, 1000);
+      } catch (error) {
+        console.error("Error during payment process:", error);
+        setProcessing(false);
+        setNotification({
+          type: 'error',
+          message: 'There was an issue processing your payment.'
+        });
+      }
+    }, 1000);
+  };
+
+  // Generate and download PDF receipt
+  const generatePDF = () => {
+    try {
+      // Create a new jsPDF instance
+      const doc = new jsPDF();
+      
+      // Set date format
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const formattedTime = currentDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Add GameBazaar logo
+      const logoUrl = '/logo.webp';
+      // We need to add the logo as an image
+      const img = new Image();
+      img.src = logoUrl;
+      
+      // When the image loads, draw it on the PDF
+      img.onload = function() {
+        // Convert the logo to base64 using a canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        const logoData = canvas.toDataURL('image/png');
+        
+        // Add logo to PDF
+        doc.addImage(logoData, 'PNG', 20, 10, 25, 25);
+        
+        // Add header text next to logo
+        doc.setFontSize(22);
+        doc.setTextColor(0, 102, 204);
+        doc.text('Game Bazaar', 50, 25);
+        
+        // Add receipt details
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Official Receipt', 105, 40, { align: 'center' });
+        
+        // Add separator line
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.5);
+        doc.line(20, 45, 190, 45);
+        
+        // Add date and order information
+        doc.setFontSize(10);
+        doc.text(`Date: ${formattedDate} ${formattedTime}`, 20, 55);
+        doc.text(`Order ID: ${orderId}`, 20, 60);
+        
+        // Customer information section
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Customer Information', 20, 70);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Name: ${user?.username || 'Guest User'}`, 20, 75);
+        doc.text(`Email: ${user?.id ? (typeof user.id === 'string' ? user.id : 'customer@gamebazaar.com') : 'customer@gamebazaar.com'}`, 20, 80);
+        
+        // Add payment information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Payment Details', 20, 90);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 95);
+        
+        // Display the appropriate identifier based on payment method
+        if (paymentMethod === 'card') {
+          // Mask the card number for security
+          const maskedNumber = 'xxxx-xxxx-xxxx-' + (cardNumber.slice(-4) || '0000');
+          doc.text(`Card Number: ${maskedNumber}`, 20, 100);
+        } else if (paymentMethod === 'paypal') {
+          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 100);
+        } else if (paymentMethod === 'bkash' || paymentMethod === 'nagad') {
+          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 100);
+        }
+        
+        doc.text(`Payment Date: ${formattedDate}`, 20, 105);
+        
+        // Order summary section title
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Summary', 20, 115);
+        doc.setFont('helvetica', 'normal');
+        
+        // Create a table body with cart items
+        let tableBody = [];
+        
+        if (cart.items && cart.items.length > 0) {
+          tableBody = cart.items.map(item => {
+            // Calculate item price correctly
+            const itemPrice = item.game.discountPrice || item.game.price;
+            const itemTotal = itemPrice * item.quantity;
+            
+            return [
+              item.game.title,
+              item.quantity.toString(),
+              `${itemPrice.toFixed(2)}/=`,
+              `${itemTotal.toFixed(2)}/=`
+            ];
+          });
+        } else {
+          tableBody = [["No items in cart", "", "", ""]]; // Fallback if cart is empty
+        }
+        
+        // Use autoTable directly - using the imported function
+        autoTable(doc, {
+          head: [["Item", "Quantity", "Unit Price", "Total"]],
+          body: tableBody,
+          startY: 120,
+          theme: 'grid',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+          columnStyles: {
+            0: { cellWidth: 80 }, // Item name column wider
+            1: { halign: 'center' }, // Quantity centered
+            2: { halign: 'center' }, // Price right-aligned
+            3: { halign: 'center' }  // Total right-aligned
+          },
+          footStyles: { fillColor: [240, 240, 240] }
+        });
+        if (doc.lastAutoTable?.finalY) {
+          // Calculate final Y position
+          let finalY = 160; // Default position if we can't get lastAutoTable
+          if (doc.lastAutoTable) {
+            finalY = doc.lastAutoTable.finalY + 10;
+          }
+          
+          // Add price summary
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(130, finalY, 190, finalY);
+          
+          finalY += 5;
+          doc.text('Price Summary:', 130, finalY);
+          finalY += 5;
+          
+          doc.text(`Subtotal:`, 130, finalY);
+          doc.text(`${subtotal.toFixed(2)}/=`, 180, finalY, { align: 'right' });
+          finalY += 5;
+          
+          if (promoApplied) {
+            doc.text(`Discount (${promoDiscount}%):`, 130, finalY);
+            doc.text(`-${discountAmount.toFixed(2)}/=`, 180, finalY, { align: 'right' });
+            finalY += 5;
+          }
+          
+          doc.text(`Tax (2%):`, 130, finalY);
+          doc.text(`${tax.toFixed(2)}/=`, 180, finalY, { align: 'right' });
+          finalY += 5;
+          
+          doc.setLineWidth(0.5);
+          doc.line(130, finalY, 190, finalY);
+          finalY += 5;
+          
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Total:`, 130, finalY);
+          doc.text(`${total.toFixed(2)}/=`, 180, finalY, { align: 'right' });
+          finalY += 15;
+          
+          // Add payment status
+          doc.setFillColor(0, 170, 0);
+          doc.roundedRect(130, finalY - 10, 60, 15, 3, 3, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.text('PAYMENT COMPLETED', 160, finalY, { align: 'center' });
+          doc.setTextColor(0, 0, 0);
+          finalY += 15;
+          
+          // Add ordered items summary
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(`Items Purchased: ${cart.items.length}`, 20, finalY);
+          finalY += 8;
+          
+          // Add footer
+          finalY = Math.max(finalY, 230); // Ensure footer doesn't overlap with content
+          
+          doc.setDrawColor(100, 100, 100);
+          doc.setLineWidth(0.5);
+          doc.line(20, finalY, 190, finalY);
+          finalY += 10;
+          
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.text('Thank you for shopping with Game Bazaar!', 105, finalY, { align: 'center' });
+          finalY += 5;
+          doc.text('For any questions or concerns, please contact support@gamebazaar.com', 105, finalY, { align: 'center' });
+          finalY += 5;
+          doc.text(`© ${new Date().getFullYear()} Game Bazaar - All Rights Reserved`, 105, finalY, { align: 'center' });
+          
+          // Save the PDF
+          doc.save(`GameBazaar-Receipt-${orderId}.pdf`);
+          
+          setNotification({
+            type: 'success',
+            message: 'Receipt downloaded successfully!'
+          });
+        }
+      };
+      
+      img.onerror = function() {
+        // If logo fails to load, continue without it
+        console.error('Failed to load logo, generating receipt without it');
+        
+        // Add header text without logo
+        doc.setFontSize(22);
+        doc.setTextColor(0, 102, 204);
+        doc.text('Game Bazaar', 105, 20, { align: 'center' });
+        
+        // Continue with the rest of the PDF generation
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Official Receipt', 105, 30, { align: 'center' });
+        
+        // Add separator line
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.5);
+        doc.line(20, 35, 190, 35);
+        
+        // Add date and order information
+        doc.setFontSize(10);
+        doc.text(`Date: ${formattedDate} ${formattedTime}`, 20, 45);
+        doc.text(`Order ID: ${orderId}`, 20, 50);
+        
+        // Customer information section
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Customer Information', 20, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Name: ${user?.username || 'Guest User'}`, 20, 65);
+        doc.text(`Email: ${user?.id ? (typeof user.id === 'string' ? user.id : 'customer@gamebazaar.com') : 'customer@gamebazaar.com'}`, 20, 70);
+        
+        // Add payment information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Payment Details', 20, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 85);
+        
+        // Display the appropriate identifier based on payment method
+        if (paymentMethod === 'card') {
+          // Mask the card number for security
+          const maskedNumber = 'xxxx-xxxx-xxxx-' + (cardNumber.slice(-4) || '0000');
+          doc.text(`Card Number: ${maskedNumber}`, 20, 90);
+        } else if (paymentMethod === 'paypal') {
+          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 90);
+        } else if (paymentMethod === 'bkash' || paymentMethod === 'nagad') {
+          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 90);
+        }
+        
+        doc.text(`Payment Date: ${formattedDate}`, 20, 95);
+        
+        // Order summary section title
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Summary', 20, 105);
+        doc.setFont('helvetica', 'normal');
+        
+        // Create a table body with cart items
+        let tableBody = [];
+        
+        if (cart.items && cart.items.length > 0) {
+          tableBody = cart.items.map(item => {
+            // Calculate item price correctly
+            const itemPrice = item.game.discountPrice || item.game.price;
+            const itemTotal = itemPrice * item.quantity;
+            
+            return [
+              item.game.title,
+              item.quantity.toString(),
+              `${itemPrice.toFixed(2)}/=`,
+              `${itemTotal.toFixed(2)}/=`
+            ];
+          });
+        } else {
+          tableBody = [["No items in cart", "", "", ""]]; // Fallback if cart is empty
+        }
+        
+        // Use autoTable directly - using the imported function
+        autoTable(doc, {
+          head: [["Item", "Quantity", "Unit Price", "Total"]],
+          body: tableBody,
+          startY: 110,
+          theme: 'grid',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+          columnStyles: {
+            0: { cellWidth: 80 }, // Item name column wider
+            1: { halign: 'center' }, // Quantity centered
+            2: { halign: 'center' }, // Price right-aligned
+            3: { halign: 'center' }  // Total right-aligned
+          },
+          footStyles: { fillColor: [240, 240, 240] }
+        });
+        
+        // Calculate final Y position
+        let finalY = 150; // Default position if we can't get lastAutoTable
+        if (doc.lastAutoTable) {
+          finalY = doc.lastAutoTable.finalY + 10;
+        }
+        
+        // Add price summary
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(130, finalY, 190, finalY);
+        
+        finalY += 5;
+        doc.text('Price Summary:', 130, finalY);
+        finalY += 5;
+        
+        doc.text(`Subtotal:`, 130, finalY);
+        doc.text(`৳${subtotal.toFixed(2)}`, 180, finalY, { align: 'right' });
+        finalY += 5;
+        
+        if (promoApplied) {
+          doc.text(`Discount (${promoDiscount}%):`, 130, finalY);
+          doc.text(`-৳${discountAmount.toFixed(2)}`, 180, finalY, { align: 'right' });
+          finalY += 5;
+        }
+        
+        doc.text(`Tax (7%):`, 130, finalY);
+        doc.text(`৳${tax.toFixed(2)}`, 180, finalY, { align: 'right' });
+        finalY += 5;
+        
+        doc.setLineWidth(0.5);
+        doc.line(130, finalY, 190, finalY);
+        finalY += 5;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total:`, 130, finalY);
+        doc.text(`৳${total.toFixed(2)}`, 180, finalY, { align: 'right' });
+        finalY += 15;
+        
+        // Add payment status
+        doc.setFillColor(0, 170, 0);
+        doc.roundedRect(130, finalY - 10, 60, 15, 3, 3, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text('PAYMENT COMPLETED', 160, finalY, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
+        finalY += 15;
+        
+        // Add ordered items summary
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Items Purchased: ${cart.items.length}`, 20, finalY);
+        finalY += 8;
+        
+        // Add footer
+        finalY = Math.max(finalY, 230); // Ensure footer doesn't overlap with content
+        
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.5);
+        doc.line(20, finalY, 190, finalY);
+        finalY += 10;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Thank you for shopping with Game Bazaar!', 105, finalY, { align: 'center' });
+        finalY += 5;
+        doc.text('For any questions or concerns, please contact support@gamebazaar.com', 105, finalY, { align: 'center' });
+        finalY += 5;
+        doc.text(`© ${new Date().getFullYear()} Game Bazaar - All Rights Reserved`, 105, finalY, { align: 'center' });
+        
+        // Save the PDF
+        doc.save(`GameBazaar-Receipt-${orderId}.pdf`);
+        
+        setNotification({
+          type: 'success',
+          message: 'Receipt downloaded successfully!'
+        });
+      };
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to generate receipt. Please try again.'
+      });
+    }
   };
 
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
@@ -118,7 +569,7 @@ export default function CartPage() {
   }, 0);
 
   const discountAmount = promoApplied ? (subtotal * promoDiscount / 100) : 0;
-  const tax = (subtotal - discountAmount) * 0.07; // 7% tax
+  const tax = (subtotal - discountAmount) * 0.02; // 2% tax
   const total = subtotal - discountAmount + tax;
 
   if (!user) {
@@ -167,24 +618,63 @@ export default function CartPage() {
           <FormControlLabel value="nagad" control={<Radio />} label="Nagad" />
         </RadioGroup>
 
-        {paymentMethod === 'card' && (
-          <Box sx={{ mt: 2 }}>
+        {/* Payment Form Fields - Show appropriate field based on payment method */}
+        <Box sx={{ mt: 2 }}>
+          {paymentMethod === 'card' && (
             <TextField
               fullWidth
               label="Card Number"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
               sx={{ mb: 2 }}
+              placeholder="Enter any card number"
+              type="number" 
             />
-            <Button 
-              variant="contained" 
-              onClick={handlePayment}
-              disabled={processing}
-            >
-              {processing ? 'Processing...' : 'Pay Now'}
-            </Button>
-          </Box>
-        )}
+          )}
+          
+          {paymentMethod === 'paypal' && (
+            <TextField
+              fullWidth
+              label="PayPal Email or Phone"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              sx={{ mb: 2 }}
+              placeholder="Enter any PayPal email or phone"
+            />
+          )}
+          
+          {paymentMethod === 'bkash' && (
+            <TextField
+              fullWidth
+              label="bKash Number"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              sx={{ mb: 2 }}
+              placeholder="Enter any bKash number"
+              type="number"
+            />
+          )}
+          
+          {paymentMethod === 'nagad' && (
+            <TextField
+              fullWidth
+              label="Nagad Number"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              sx={{ mb: 2 }}
+              placeholder="Enter any Nagad number"
+              type="number"
+            />
+          )}
+          
+          <Button 
+            variant="contained" 
+            onClick={handlePayment}
+            disabled={processing}
+          >
+            {processing ? 'Processing...' : 'Pay Now'}
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
@@ -364,8 +854,10 @@ export default function CartPage() {
                 fullWidth
                 size="large"
                 sx={{ mt: 3 }}
+                onClick={handlePayment}
+                disabled={processing}
               >
-                Proceed to Checkout
+                {processing ? 'Processing...' : 'Proceed to Checkout'}
               </Button>
 
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -392,6 +884,42 @@ export default function CartPage() {
           </Button>
         </Box>
       )}
+
+      {/* Payment Success Dialog */}
+      <Dialog
+        open={paymentSuccessDialog}
+        onClose={() => setPaymentSuccessDialog(false)}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <CheckCircle color="success" sx={{ mr: 1 }} />
+            Payment Successful
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Your payment has been processed successfully. Your order ID is <strong>{orderId}</strong>.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            You can download your receipt by clicking the button below.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            startIcon={<Download />}
+            onClick={generatePDF}
+          >
+            Download Receipt
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setPaymentSuccessDialog(false)}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
