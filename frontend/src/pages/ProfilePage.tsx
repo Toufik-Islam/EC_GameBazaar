@@ -1,7 +1,23 @@
-
-import React from 'react';
-import { Typography, Box, Paper, Container, Grid, Avatar, Button, Tabs, Tab, TextField, Divider } from '@mui/material';
-import { Person, Edit, Save } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { 
+  Typography, 
+  Box, 
+  Paper, 
+  Container, 
+  Grid, 
+  Avatar, 
+  Button, 
+  Tabs, 
+  Tab, 
+  TextField, 
+  Divider,
+  Snackbar,
+  Alert,
+  InputAdornment,
+  IconButton
+} from '@mui/material';
+import { Person, Edit, Save, Visibility, VisibilityOff } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -29,19 +45,96 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-export default function ProfilePage() {
-  const [tabValue, setTabValue] = React.useState(0);
-  const [editing, setEditing] = React.useState(false);
+interface UserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  avatar: string;
+  memberSince?: string;
+}
 
-  // Mock user data
-  const [userData, setUserData] = React.useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '(123) 456-7890',
-    address: '123 Gaming Street, Gamer City, GC 12345',
-    avatar: 'https://via.placeholder.com/150'
+export default function ProfilePage() {
+  const [tabValue, setTabValue] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const { user, token } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  // User data state
+  const [userData, setUserData] = useState<UserData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    avatar: 'https://placehold.co/150x150?text=User',
+    memberSince: 'January 2023'
   });
+
+  // Fetch user data from backend
+  useEffect(() => {
+    if (user && token) {
+      fetchUserData();
+    }
+  }, [user, token]);
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user?.id || '' // Add user ID in header for development mode
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Split the name into first and last name
+        const nameParts = data.data.name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        setUserData({
+          firstName,
+          lastName,
+          email: data.data.email,
+          phone: data.data.phone || '',
+          address: data.data.address || '',
+          avatar: data.data.avatar || 'https://placehold.co/150x150?text=User',
+          memberSince: new Date(data.data.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long'
+          })
+        });
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to fetch user data'
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -49,6 +142,13 @@ export default function ProfilePage() {
 
   const handleEditToggle = () => {
     setEditing(!editing);
+    if (!editing) {
+      // Reset password fields when entering edit mode
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,14 +159,133 @@ export default function ProfilePage() {
     });
   };
 
-  const handleSave = () => {
-    // This would call an API to update user data in a real app
-    alert('Profile updated successfully! (This would save to the server in a real app)');
-    setEditing(false);
+  const handleSave = async () => {
+    if (!user || !token) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id || '' // Add user ID in header for development mode
+        },
+        body: JSON.stringify({
+          name: `${userData.firstName} ${userData.lastName}`,
+          phone: userData.phone,
+          address: userData.address
+          // Email is not included as it should be unchangeable
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Profile updated successfully!'
+        });
+        setEditing(false);
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.message || 'Failed to update profile'
+        });
+      }
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setNotification({
+        type: 'error',
+        message: 'Error connecting to server'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!user || !token) return;
+    
+    // Validate passwords
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
+    
+    if (!newPassword) {
+      setPasswordError('New password is required');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id || '' // Add user ID in header for development mode
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: 'Password changed successfully!'
+        });
+        // Reset password fields
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError('');
+      } else {
+        setPasswordError(data.message || 'Failed to change password');
+      }
+    } catch (err) {
+      console.error('Error changing password:', err);
+      setPasswordError('Error connecting to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeNotification = () => {
+    setNotification(null);
   };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Notification */}
+      <Snackbar 
+        open={notification !== null} 
+        autoHideDuration={6000} 
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {notification && (
+          <Alert onClose={closeNotification} severity={notification.type}>
+            {notification.message}
+          </Alert>
+        )}
+      </Snackbar>
+
       <Grid container spacing={3}>
         {/* Profile Header */}
         <Grid item xs={12}>
@@ -80,13 +299,14 @@ export default function ProfilePage() {
                 {userData.firstName} {userData.lastName}
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Member since January 2023
+                Member since {userData.memberSince}
               </Typography>
             </Box>
             <Button
               variant={editing ? "outlined" : "contained"}
               startIcon={editing ? <Save /> : <Edit />}
               onClick={editing ? handleSave : handleEditToggle}
+              disabled={loading}
             >
               {editing ? "Save Changes" : "Edit Profile"}
             </Button>
@@ -119,7 +339,7 @@ export default function ProfilePage() {
                     name="firstName"
                     value={userData.firstName}
                     onChange={handleInputChange}
-                    disabled={!editing}
+                    disabled={!editing || loading}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -129,7 +349,7 @@ export default function ProfilePage() {
                     name="lastName"
                     value={userData.lastName}
                     onChange={handleInputChange}
-                    disabled={!editing}
+                    disabled={!editing || loading}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -139,7 +359,8 @@ export default function ProfilePage() {
                     name="email"
                     value={userData.email}
                     onChange={handleInputChange}
-                    disabled={!editing}
+                    disabled={true} // Email is always disabled/unchangeable
+                    helperText="Email address cannot be changed"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -149,7 +370,7 @@ export default function ProfilePage() {
                     name="phone"
                     value={userData.phone}
                     onChange={handleInputChange}
-                    disabled={!editing}
+                    disabled={!editing || loading}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -159,7 +380,7 @@ export default function ProfilePage() {
                     name="address"
                     value={userData.address}
                     onChange={handleInputChange}
-                    disabled={!editing}
+                    disabled={!editing || loading}
                   />
                 </Grid>
                 {editing && (
@@ -168,6 +389,7 @@ export default function ProfilePage() {
                       variant="contained"
                       startIcon={<Save />}
                       onClick={handleSave}
+                      disabled={loading}
                     >
                       Save Changes
                     </Button>
@@ -181,41 +403,87 @@ export default function ProfilePage() {
               <Typography variant="h6" gutterBottom>
                 Password Management
               </Typography>
+              
+              {passwordError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {passwordError}
+                </Alert>
+              )}
+              
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    type="password"
+                    type={showCurrentPassword ? 'text' : 'password'}
                     label="Current Password"
-                    disabled={!editing}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            edge="end"
+                          >
+                            {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    type="password"
+                    type={showNewPassword ? 'text' : 'password'}
                     label="New Password"
-                    disabled={!editing}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            edge="end"
+                          >
+                            {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     label="Confirm New Password"
-                    disabled={!editing}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
-                {editing && (
-                  <Grid item xs={12}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                    >
-                      Update Password
-                    </Button>
-                  </Grid>
-                )}
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handlePasswordChange}
+                    disabled={loading}
+                  >
+                    Update Password
+                  </Button>
+                </Grid>
               </Grid>
 
               <Divider sx={{ my: 3 }} />

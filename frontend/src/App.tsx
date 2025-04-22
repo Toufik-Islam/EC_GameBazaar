@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminRoute } from './components/AdminRoute';
+import { AuthRoute } from './components/AuthRoute';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Header from './components/layout/Header';
@@ -66,15 +67,15 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/profile" element={
-                      <AdminRoute>
+                      <AuthRoute>
                         <ProfilePage />
-                      </AdminRoute>
+                      </AuthRoute>
                     } />
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/order-history" element={
-                      <AdminRoute>
+                      <AuthRoute>
                         <OrderHistoryPage />
-                      </AdminRoute>
+                      </AuthRoute>
                     } />
                     <Route path="/admin-dashboard" element={
                       <AdminRoute>

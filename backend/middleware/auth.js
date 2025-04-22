@@ -27,26 +27,40 @@ exports.protect = async (req, res, next) => {
   try {
     // Special handling for development tokens (only in development environment)
     if (process.env.NODE_ENV !== 'production' && token.startsWith('dev_token_')) {
-      // Extract test user ID from the token (for development purposes only)
-      const testId = token.split('_')[3] || '1';
+      // Check if we have a user ID in localStorage that matches this dev token
+      const userIdFromToken = req.headers['x-user-id'];
       
-      // Find the user based on the extracted ID
-      const user = await User.findOne({ role: { $in: ['user', 'admin'] } });
-      
-      if (!user) {
-        // If no user is found, try to find any user (admin or regular)
-        const anyUser = await User.findOne();
-        if (!anyUser) {
-          return res.status(401).json({
-            success: false,
-            message: 'User not found or no longer exists'
-          });
+      if (userIdFromToken) {
+        // Try to find the user with this ID first
+        const userById = await User.findById(userIdFromToken).catch(() => null);
+        
+        if (userById) {
+          req.user = userById;
+          return next();
         }
-        req.user = anyUser;
-      } else {
-        req.user = user;
       }
-
+      
+      // Fallback: find a user with the matching role (admin or user based on token)
+      const isAdminToken = token.includes('admin');
+      const user = await User.findOne({ 
+        role: isAdminToken ? 'admin' : 'user' 
+      });
+      
+      if (user) {
+        req.user = user;
+        return next();
+      }
+      
+      // Last fallback: find any user
+      const anyUser = await User.findOne();
+      if (!anyUser) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found or no longer exists'
+        });
+      }
+      
+      req.user = anyUser;
       return next();
     }
 

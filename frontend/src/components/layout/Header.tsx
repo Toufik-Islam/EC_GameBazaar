@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -136,7 +135,7 @@ export default function Header() {
         {isLoggedIn && (
           <ListItem component={Link} to="/profile">
             <ListItemIcon><Person /></ListItemIcon>
-            <ListItemText primary="Profile" />
+            <ListItemText primary="Account Settings" />
           </ListItem>
         )}
       </List>
@@ -158,11 +157,10 @@ export default function Header() {
   );
 
   const menuItems = isLoggedIn ? [
-    <MenuItem key="profile" onClick={() => { handleMenuClose(); navigate('/profile'); }}>My Profile</MenuItem>,
+    <MenuItem key="account" onClick={() => { handleMenuClose(); navigate('/profile'); }}>Account Settings</MenuItem>,
     <MenuItem key="orders" onClick={() => { handleMenuClose(); navigate('/order-history'); }}>Order History</MenuItem>,
     <MenuItem key="wishlist" onClick={() => { handleMenuClose(); navigate('/wishlist'); }}>My Wishlist</MenuItem>,
     isAdmin() && <MenuItem key="admin" onClick={() => { handleMenuClose(); navigate('/admin-dashboard'); }}>Admin Dashboard</MenuItem>,
-    <MenuItem key="settings" onClick={() => { handleMenuClose(); navigate('/profile?tab=settings'); }}>Account Settings</MenuItem>,
     <MenuItem key="logout" onClick={() => { handleMenuClose(); logout(); }}>Logout</MenuItem>
   ].filter(Boolean) : [
     <MenuItem key="login" onClick={() => { handleMenuClose(); navigate('/login'); }}>Login</MenuItem>,

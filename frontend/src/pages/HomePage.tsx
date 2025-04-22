@@ -30,24 +30,6 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { gameEvents } from './AdminDashboard';
 
-// Featured banners
-const FEATURED_BANNERS = [
-  {
-    id: 1,
-    title: 'Summer Sale',
-    description: 'Get up to 70% off on selected games',
-    image: 'https://via.placeholder.com/1200x300?text=Summer+Sale+Banner',
-    link: '/?sale=summer'
-  },
-  {
-    id: 2,
-    title: 'New Releases',
-    description: 'Check out the newest games',
-    image: 'https://via.placeholder.com/1200x300?text=New+Releases+Banner',
-    link: '/?sort=newest'
-  }
-];
-
 export default function HomePage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -289,22 +271,6 @@ export default function HomePage() {
         </Alert>
       )}
       
-      {/* Featured Banner - Only show on home with no filters */}
-      {!searchQuery && !categoryFilter && (
-        <Box sx={{ mb: 4, overflow: 'hidden', borderRadius: 2 }}>
-          <Box
-            component="img"
-            src={FEATURED_BANNERS[0].image}
-            alt={FEATURED_BANNERS[0].title}
-            sx={{
-              width: '100%',
-              height: isMobile ? '150px' : '300px',
-              objectFit: 'cover',
-            }}
-          />
-        </Box>
-      )}
-      
       {/* Page Title with Refresh Option */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" component="h1">
@@ -377,7 +343,7 @@ export default function HomePage() {
                     height="140"
                     image={game.images && game.images.length > 0 
                       ? game.images[0] 
-                      : 'https://via.placeholder.com/300x200?text=Game+Image'}
+                      : 'https://placehold.co/300x200?text=Game+Image'}
                     alt={game.title}
                   />
                 </Link>

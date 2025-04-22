@@ -94,6 +94,82 @@ exports.getMe = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/update-profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    // Don't allow email updates for security
+    const { email, password, ...updateData } = req.body;
+    
+    // Find and update the user
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// @desc    Change user password
+// @route   PUT /api/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide current and new password'
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user.id).select('+password');
+
+    // Check current password
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Set new password
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
 // @desc    Log user out / clear cookie
 // @route   GET /api/auth/logout
 // @access  Private
