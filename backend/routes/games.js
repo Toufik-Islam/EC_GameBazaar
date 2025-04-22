@@ -6,7 +6,8 @@ const {
   updateGame,
   deleteGame,
   getFeaturedGames,
-  getGamesOnSale
+  getGamesOnSale,
+  getGamesByCategory
 } = require('../controllers/games');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get('/', getGames);
 router.get('/featured', getFeaturedGames);
 router.get('/sale', getGamesOnSale);
+router.get('/category/:genreName', getGamesByCategory);
 router.get('/:id', getGame);
 
 // Protected admin routes

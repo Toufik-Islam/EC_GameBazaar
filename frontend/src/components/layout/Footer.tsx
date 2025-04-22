@@ -32,14 +32,14 @@ export default function Footer() {
 
           <Grid item xs={12} sm={3}>
             <Typography variant="h6" gutterBottom>
-              Categories
+              Popular Categories
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', '& > a': { color: 'white', mb: 1 } }}>
               <Link component={RouterLink} to="/?category=action" sx={{ display: 'inline-block', p: 0.5 }}>Action</Link>
-              <Link component={RouterLink} to="/?category=adventure" sx={{ display: 'inline-block', p: 0.5 }}>Adventure</Link>
-              <Link component={RouterLink} to="/?category=rpg" sx={{ display: 'inline-block', p: 0.5 }}>RPG</Link>
-              <Link component={RouterLink} to="/?category=simulation" sx={{ display: 'inline-block', p: 0.5 }}>Simulation</Link>
               <Link component={RouterLink} to="/?category=strategy" sx={{ display: 'inline-block', p: 0.5 }}>Strategy</Link>
+              <Link component={RouterLink} to="/?category=sports" sx={{ display: 'inline-block', p: 0.5 }}>Sports</Link>
+              <Link component={RouterLink} to="/?category=racing" sx={{ display: 'inline-block', p: 0.5 }}>Racing</Link>
+              <Link component={RouterLink} to="/?category=fps" sx={{ display: 'inline-block', p: 0.5 }}>FPS</Link>
             </Box>
           </Grid>
 

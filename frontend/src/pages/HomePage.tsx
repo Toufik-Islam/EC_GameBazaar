@@ -71,11 +71,17 @@ export default function HomePage() {
       }
       
       if (categoryFilter) {
-        apiParams.append('genre', categoryFilter);
+        // Special handling for "open world" category with space
+        const formattedCategory = categoryFilter === "open world" ? 
+          "Open World" : 
+          categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
+        
+        // Use a properly capitalized genre name for backend filtering
+        apiParams.append('genre', formattedCategory);
       }
       
       if (saleFilter) {
-        apiParams.append('sale', 'true');
+        url = '/api/games/sale';
       }
       
       // Add query parameters if any exist
@@ -83,6 +89,7 @@ export default function HomePage() {
         url += `?${apiParams.toString()}`;
       }
       
+      console.log('Fetching games from:', url);  // Debug: Log the URL being used
       const response = await fetch(url);
       const data = await response.json();
       
@@ -91,11 +98,45 @@ export default function HomePage() {
         // Set lastRefresh timestamp whenever we successfully fetch new data
         setLastRefresh(new Date());
       } else {
-        setError('Failed to fetch games');
+        // If we have a category filter and still get an error, fetch all games and filter client-side
+        if (categoryFilter) {
+          console.log('Falling back to client-side filtering for category:', categoryFilter);
+          const allGamesResponse = await fetch('/api/games');
+          const allGamesData = await allGamesResponse.json();
+          
+          if (allGamesData.success) {
+            setGames(allGamesData.data);
+            setLastRefresh(new Date());
+          } else {
+            setError('Failed to fetch games');
+          }
+        } else {
+          setError('Failed to fetch games');
+        }
       }
     } catch (err) {
-      setError('Error connecting to server');
-      console.error('Error fetching games:', err);
+      // If we have a network error but a category filter, try client-side only
+      if (categoryFilter) {
+        try {
+          console.log('Network error, trying client-side only filtering');
+          const allGamesResponse = await fetch('/api/games');
+          const allGamesData = await allGamesResponse.json();
+          
+          if (allGamesData.success) {
+            setGames(allGamesData.data);
+            setLastRefresh(new Date());
+            // Don't set error since we recovered
+          } else {
+            setError('Error loading games');
+          }
+        } catch (fallbackErr) {
+          setError('Error connecting to server');
+          console.error('Error in fallback fetch:', fallbackErr);
+        }
+      } else {
+        setError('Error connecting to server');
+        console.error('Error fetching games:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -453,7 +494,9 @@ export default function HomePage() {
             Browse by Category
           </Typography>
           <Grid container spacing={2}>
-            {['Action', 'Adventure', 'RPG', 'Simulation', 'Strategy', 'Sports', 'Puzzle'].map((category) => (
+            {['Action', 'Adventure', 'RPG', 'Strategy', 'Simulation', 
+              'Sports', 'Racing', 'Puzzle', 'FPS', 'Fighting', 
+              'Platformer', 'Survival', 'Horror', 'Stealth', 'Open World'].map((category) => (
               <Grid item key={category} xs={6} sm={4} md={3} lg={2}>
                 <Card 
                   component={Link} 

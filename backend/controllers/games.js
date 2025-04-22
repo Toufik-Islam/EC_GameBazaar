@@ -14,6 +14,20 @@ exports.getGames = async (req, res) => {
     // Loop over removeFields and delete them from reqQuery
     removeFields.forEach(param => delete reqQuery[param]);
 
+    // Special handling for genre filter
+    if (reqQuery.genre) {
+      // Convert single value to array for consistent handling
+      const genreFilter = Array.isArray(reqQuery.genre) ? reqQuery.genre : [reqQuery.genre];
+      
+      // Create a case-insensitive regex array for each genre
+      const regexFilters = genreFilter.map(genre => 
+        new RegExp('^' + genre + '$', 'i')
+      );
+      
+      // Use MongoDB $in operator with regex for case-insensitive matching
+      reqQuery.genre = { $in: regexFilters };
+    }
+
     // Create query string
     let queryStr = JSON.stringify(reqQuery);
 
@@ -212,6 +226,30 @@ exports.getGamesOnSale = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 8;
     const games = await Game.find({ onSale: true }).limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: games.length,
+      data: games
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// @desc    Get games by category (genre)
+// @route   GET /api/games/category/:genreName
+// @access  Public
+exports.getGamesByCategory = async (req, res) => {
+  try {
+    const genre = req.params.genreName;
+    // Use case-insensitive regex matching for consistency
+    const games = await Game.find({ 
+      genre: { $in: [new RegExp('^' + genre + '$', 'i')] } 
+    });
 
     res.status(200).json({
       success: true,

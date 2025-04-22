@@ -112,7 +112,9 @@ export default function Header() {
   };
 
   const categories = [
-    'Action', 'Adventure', 'RPG', 'Simulation', 'Strategy', 'Sports', 'Puzzle'
+    'Action', 'Adventure', 'RPG', 'Strategy', 'Simulation', 
+    'Sports', 'Racing', 'Puzzle', 'FPS', 'Fighting', 
+    'Platformer', 'Survival', 'Horror', 'Stealth', 'Open World'
   ];
 
   const drawer = (
