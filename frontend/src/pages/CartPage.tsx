@@ -84,7 +84,8 @@ export default function CartPage() {
     setTimeout(async () => {
       try {
         // First generate and download the receipt before clearing the cart
-        generatePDF();
+        // Pass the newOrderId directly to the generatePDF function to ensure it uses the current value
+        generatePDF(newOrderId);
         
         // Wait a bit to ensure PDF is generated before clearing cart
         setTimeout(async () => {
@@ -111,7 +112,7 @@ export default function CartPage() {
   };
 
   // Generate and download PDF receipt
-  const generatePDF = () => {
+  const generatePDF = (orderId: string) => {
     try {
       // Create a new jsPDF instance
       const doc = new jsPDF();
