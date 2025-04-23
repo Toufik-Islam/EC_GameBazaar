@@ -91,10 +91,14 @@ const OrderSchema = new mongoose.Schema({
   approvedAt: {
     type: Date
   },
+  approvedBy: {
+    name: String,
+    email: String
+  },
   status: {
     type: String,
     required: true,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'processing', 'completed', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
   createdAt: {

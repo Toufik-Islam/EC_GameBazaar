@@ -21,14 +21,16 @@ import {
   InputAdornment,
   IconButton,
   CircularProgress,
-  Alert
+  Alert,
+  Tooltip
 } from '@mui/material';
 import {
   ExpandMore,
   Search,
   FileDownload,
   FilterList,
-  GetApp
+  GetApp,
+  AdminPanelSettings
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
@@ -45,12 +47,19 @@ interface OrderItem {
   price: number;
 }
 
+interface ApprovedBy {
+  name: string;
+  email: string;
+}
+
 interface Order {
   _id: string;
   createdAt: string;
   status: string;
   isPaid: boolean;
   paidAt?: string;
+  approvedAt?: string;
+  approvedBy?: ApprovedBy;
   totalPrice: number;
   paymentMethod: string;
   paymentResult?: {
@@ -261,7 +270,18 @@ export default function OrderHistoryPage() {
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Order Status</Typography>
-                    <Typography variant="body1">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</Typography>
+                    <Typography variant="body1">
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {order.status === 'completed' && order.approvedBy && (
+                        <Tooltip title={`Approved by ${order.approvedBy.name} (${order.approvedBy.email})`}>
+                          <AdminPanelSettings 
+                            fontSize="small" 
+                            color="primary" 
+                            sx={{ ml: 1, verticalAlign: 'middle' }} 
+                          />
+                        </Tooltip>
+                      )}
+                    </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Payment Method</Typography>
@@ -271,6 +291,26 @@ export default function OrderHistoryPage() {
                     <Typography variant="subtitle2">Total Amount</Typography>
                     <Typography variant="body1">৳{order.totalPrice.toFixed(2)}</Typography>
                   </Grid>
+                  
+                  {order.approvedBy && (
+                    <Grid item xs={12}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        p: 1.5, 
+                        mt: 1, 
+                        bgcolor: 'success.light', 
+                        borderRadius: 1,
+                        color: 'white'
+                      }}>
+                        <AdminPanelSettings sx={{ mr: 1 }} />
+                        <Typography variant="body2">
+                          Approved by {order.approvedBy.name} ({order.approvedBy.email})
+                          {order.approvedAt && ` on ${formatDate(order.approvedAt)}`}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
                 </Grid>
                 
                 <Typography variant="h6" gutterBottom>

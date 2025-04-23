@@ -83,7 +83,7 @@ export default function AdminDashboard() {
   const [tabValue, setTabValue] = useState(0);
   const [openAddGame, setOpenAddGame] = useState(false);
   const [openEditGame, setOpenEditGame] = useState(false);
-  const { isAdmin, token } = useAuth();
+  const { isAdmin, token, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -208,20 +208,37 @@ export default function AdminDashboard() {
       setOrderError(null);
       console.log(`Approving order ${orderId}...`);
       
+      // Make sure we have access to the user object
+      if (!user) {
+        console.error('Cannot approve order: Admin user information is not available');
+        setOrderError('Admin information not available. Please try again or refresh the page.');
+        setOrderLoading(false);
+        return;
+      }
+      
+      // Use the same approach as when orders are created - get user info directly from auth context
+      const adminInfo = {
+        adminName: user.name,
+        adminEmail: user.email
+      };
+      
+      console.log('Admin info for approval:', adminInfo);
+      
       const response = await fetch(`/api/orders/${orderId}/approve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify(adminInfo)
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
 
       const data = await response.json();
       console.log('Order approval response:', data);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}. Message: ${data.message || 'Unknown error'}`);
+      }
       
       if (data.success) {
         setSuccess('Order approved successfully');
@@ -238,7 +255,7 @@ export default function AdminDashboard() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       console.error('Error approving order:', errorMessage);
-      setOrderError('Error approving order');
+      setOrderError(`Error approving order: ${errorMessage}`);
     } finally {
       setOrderLoading(false);
     }

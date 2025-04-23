@@ -398,6 +398,7 @@ exports.getPendingOrders = async (req, res) => {
 exports.approveOrder = async (req, res) => {
   try {
     console.log('[Admin Panel] Approving order:', req.params.id);
+    const { adminName, adminEmail } = req.body;
     
     let order = await Order.findById(req.params.id).populate({
       path: 'user',
@@ -426,14 +427,20 @@ exports.approveOrder = async (req, res) => {
       });
     }
 
-    // Update status to processing (or completed based on your business logic)
-    order.status = 'processing';
+    // Update status to completed (changed from 'processing')
+    order.status = 'completed';
     
     // Record approval timestamp
     order.approvedAt = Date.now();
+    
+    // Record admin who approved the order
+    order.approvedBy = {
+      name: adminName || req.user.name,
+      email: adminEmail || req.user.email
+    };
 
     await order.save();
-    console.log('[Admin Panel] Order marked as processing:', order._id.toString());
+    console.log('[Admin Panel] Order marked as completed:', order._id.toString());
 
     // Return the updated order with populated fields
     const approvedOrder = await Order.findById(order._id)
@@ -451,7 +458,7 @@ exports.approveOrder = async (req, res) => {
       // Import notification utility here
       const notificationUtil = require('../utils/notification');
       if (notificationUtil && typeof notificationUtil.sendOrderStatusNotification === 'function') {
-        await notificationUtil.sendOrderStatusNotification(approvedOrder, 'processing');
+        await notificationUtil.sendOrderStatusNotification(approvedOrder, 'completed');
         console.log('[Admin Panel] Order approval notification sent');
       } else {
         console.log('[Admin Panel] Notification utility not available or invalid');
