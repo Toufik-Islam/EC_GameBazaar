@@ -227,12 +227,22 @@ exports.updateOrderStatus = async (req, res) => {
 // @access  Private
 exports.updateOrderToPaid = async (req, res) => {
   try {
-    const { paymentResult } = req.body;
+    const { 
+      paymentResult,
+      paymentMethod = 'creditCard' // Default if not provided
+    } = req.body;
+
+    console.log('[Payment Process] Order payment initiated:', {
+      orderId: req.params.id,
+      paymentMethod,
+      paymentResult: paymentResult ? { ...paymentResult } : 'No payment result provided'
+    });
 
     let order = await Order.findById(req.params.id);
 
     // Check if order exists
     if (!order) {
+      console.log('[Payment Process] Order not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: `Order not found with id of ${req.params.id}`
@@ -241,6 +251,11 @@ exports.updateOrderToPaid = async (req, res) => {
 
     // Check if user is admin or the order belongs to user
     if (req.user.role !== 'admin' && order.user.toString() !== req.user.id) {
+      console.log('[Payment Process] Unauthorized payment attempt:', {
+        orderId: req.params.id,
+        requestUserId: req.user.id,
+        orderUserId: order.user.toString()
+      });
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this order'
@@ -250,19 +265,212 @@ exports.updateOrderToPaid = async (req, res) => {
     // Update payment info
     order.isPaid = true;
     order.paidAt = Date.now();
-    order.paymentResult = paymentResult;
-    order.status = 'processing';
+    order.paymentResult = {
+      id: paymentResult?.id || 'payment_id',
+      status: paymentResult?.status || 'completed',
+      update_time: paymentResult?.update_time || new Date().toISOString(),
+      email_address: paymentResult?.email_address || req.user.email
+    };
+    
+    // Update payment method if provided
+    if (paymentMethod) {
+      order.paymentMethod = paymentMethod;
+    }
+    
+    // Mark order as pending for admin approval
+    order.status = 'pending';
+
+    console.log('[Payment Process] Updating order with payment info:', {
+      orderId: order._id,
+      status: 'pending',
+      isPaid: true,
+      paidAt: new Date().toISOString()
+    });
 
     await order.save();
+    console.log('[Payment Process] Order successfully marked as paid:', order._id);
+
+    // Return the updated order
+    const updatedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .populate({
+        path: 'orderItems.game',
+        select: 'title images'
+      });
 
     res.status(200).json({
       success: true,
-      data: order
+      message: 'Payment successful. Order is pending admin approval.',
+      data: updatedOrder
     });
   } catch (err) {
+    console.error('[Payment Process] Error in payment processing:', err);
     res.status(500).json({
       success: false,
       message: err.message
+    });
+  }
+};
+
+// @desc    Get all pending orders
+// @route   GET /api/orders/pending
+// @access  Private/Admin
+exports.getPendingOrders = async (req, res) => {
+  try {
+    console.log('[Admin Panel] Fetching pending orders, requested by:', {
+      userId: req.user.id,
+      userRole: req.user.role
+    });
+    
+    // First, check if there are any orders with pending status
+    const totalPendingCount = await Order.countDocuments({ status: 'pending' });
+    const totalPaidCount = await Order.countDocuments({ isPaid: true });
+    const bothConditionsCount = await Order.countDocuments({ 
+      status: 'pending', 
+      isPaid: true 
+    });
+    
+    console.log('[Admin Panel] Current order counts in database:', {
+      totalOrders: await Order.countDocuments(),
+      pendingStatusCount: totalPendingCount,
+      paidOrdersCount: totalPaidCount,
+      pendingAndPaidCount: bothConditionsCount
+    });
+
+    // Try to find all pending and paid orders
+    const pendingOrders = await Order.find({ 
+      status: 'pending',
+      isPaid: true 
+    }).populate({
+      path: 'user',
+      select: 'name email'
+    }).populate({
+      path: 'orderItems.game',
+      select: 'title images price'
+    });
+
+    console.log('[Admin Panel] Pending orders found:', {
+      count: pendingOrders.length,
+      orderIds: pendingOrders.map(order => order._id.toString())
+    });
+
+    if (pendingOrders.length === 0) {
+      // If no pending orders, let's check if there are any pending orders without 'isPaid: true'
+      // This will help diagnose if there's an issue with the payment process
+      const onlyPendingOrders = await Order.find({ status: 'pending' })
+        .select('_id isPaid paidAt createdAt');
+      
+      if (onlyPendingOrders.length > 0) {
+        console.log('[Admin Panel] Orders with only pending status (paid status may be incorrect):', {
+          count: onlyPendingOrders.length,
+          orders: onlyPendingOrders.map(o => ({
+            id: o._id.toString(),
+            isPaid: o.isPaid,
+            paidAt: o.paidAt,
+            createdAt: o.createdAt
+          }))
+        });
+      }
+    }
+    
+    // Return success response with pending orders
+    return res.status(200).json({
+      success: true,
+      count: pendingOrders.length,
+      data: pendingOrders
+    });
+    
+  } catch (err) {
+    console.error('[Admin Panel] Error fetching pending orders:', err);
+    return res.status(500).json({
+      success: false,
+      message: `Error fetching pending orders: ${err.message}`
+    });
+  }
+};
+
+// @desc    Approve order
+// @route   PUT /api/orders/:id/approve
+// @access  Private/Admin
+exports.approveOrder = async (req, res) => {
+  try {
+    console.log('[Admin Panel] Approving order:', req.params.id);
+    
+    let order = await Order.findById(req.params.id).populate({
+      path: 'user',
+      select: 'name email'
+    });
+
+    // Check if order exists
+    if (!order) {
+      console.log('[Admin Panel] Order not found for approval:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: `Order not found with id of ${req.params.id}`
+      });
+    }
+
+    // Verify the order is in pending status and has been paid
+    if (order.status !== 'pending' || !order.isPaid) {
+      console.log('[Admin Panel] Cannot approve order - invalid status or payment:', {
+        orderId: order._id.toString(),
+        status: order.status,
+        isPaid: order.isPaid
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending and paid orders can be approved'
+      });
+    }
+
+    // Update status to processing (or completed based on your business logic)
+    order.status = 'processing';
+    
+    // Record approval timestamp
+    order.approvedAt = Date.now();
+
+    await order.save();
+    console.log('[Admin Panel] Order marked as processing:', order._id.toString());
+
+    // Return the updated order with populated fields
+    const approvedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .populate({
+        path: 'orderItems.game',
+        select: 'title images'
+      });
+
+    // Notify the user about order approval - do this safely
+    try {
+      // Import notification utility here
+      const notificationUtil = require('../utils/notification');
+      if (notificationUtil && typeof notificationUtil.sendOrderStatusNotification === 'function') {
+        await notificationUtil.sendOrderStatusNotification(approvedOrder, 'processing');
+        console.log('[Admin Panel] Order approval notification sent');
+      } else {
+        console.log('[Admin Panel] Notification utility not available or invalid');
+      }
+    } catch (notificationError) {
+      console.error('[Admin Panel] Failed to send order approval notification:', notificationError);
+      // Continue with the response even if notification fails
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Order has been approved successfully',
+      data: approvedOrder
+    });
+  } catch (err) {
+    console.error('[Admin Panel] Error approving order:', err);
+    res.status(500).json({
+      success: false,
+      message: `Error approving order: ${err.message}`
     });
   }
 };

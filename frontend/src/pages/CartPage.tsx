@@ -64,6 +64,22 @@ export default function CartPage() {
     return `ORD-${timestamp}-${randomNum}`;
   };
 
+  // Helper function to convert frontend payment method to backend format
+  const convertPaymentMethodForBackend = (frontendMethod: string): string => {
+    switch (frontendMethod) {
+      case 'card':
+        return 'creditCard';
+      case 'paypal':
+        return 'paypal';
+      case 'bkash':
+        return 'bkash';
+      case 'nagad':
+        return 'nagad';
+      default:
+        return 'creditCard';
+    }
+  };
+
   const handlePayment = async () => {
     // Check if card number has been entered
     if (!cardNumber.trim()) {
@@ -76,39 +92,100 @@ export default function CartPage() {
 
     setProcessing(true);
     
-    // Generate a random order ID for the receipt
-    const newOrderId = generateOrderId();
-    setOrderId(newOrderId);
-    
-    // Simulate payment processing (1 second delay)
-    setTimeout(async () => {
-      try {
-        // First generate and download the receipt before clearing the cart
-        // Pass the newOrderId directly to the generatePDF function to ensure it uses the current value
-        generatePDF(newOrderId);
-        
-        // Wait a bit to ensure PDF is generated before clearing cart
-        setTimeout(async () => {
-          // Then clear the cart after successful payment
-          await clearCart();
-          
-          setProcessing(false);
-          // Show success dialog
-          setPaymentSuccessDialog(true);
-          setNotification({
-            type: 'success',
-            message: 'Payment successful! Your order has been placed and receipt downloaded.'
-          });
-        }, 1000);
-      } catch (error) {
-        console.error("Error during payment process:", error);
-        setProcessing(false);
-        setNotification({
-          type: 'error',
-          message: 'There was an issue processing your payment.'
-        });
+    try {
+      // Create shipping address from user data (in a real app, you would collect this from the user)
+      const shippingAddress = {
+        street: '123 Game Street',
+        city: 'Gameville',
+        state: 'GA',
+        zipCode: '12345',
+        country: 'GameLand'
+      };
+
+      // Create the order data
+      const orderData = {
+        shippingAddress,
+        paymentMethod: convertPaymentMethodForBackend(paymentMethod),
+        taxPrice: tax,
+        shippingPrice: 0,
+        totalPrice: total
+      };
+
+      console.log('Creating order with data:', orderData);
+
+      // Call the backend API to create the order
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const orderResult = await orderResponse.json();
+      console.log('Order creation response:', orderResult);
+
+      if (!orderResponse.ok) {
+        throw new Error(orderResult.message || 'Failed to create order');
       }
-    }, 1000);
+
+      // Store the order ID from the backend
+      const newOrderId = orderResult.data._id;
+      setOrderId(newOrderId);
+
+      // Update the order payment status
+      const paymentData = {
+        paymentMethod: convertPaymentMethodForBackend(paymentMethod),
+        paymentResult: {
+          id: Date.now().toString(),
+          status: 'completed',
+          update_time: new Date().toISOString(),
+          email_address: user?.id || 'customer@gamebazaar.com'
+        }
+      };
+
+      console.log('Updating payment for order:', newOrderId, 'with payment method:', paymentData.paymentMethod);
+
+      // Call the payment update endpoint
+      const paymentResponse = await fetch(`/api/orders/${newOrderId}/pay`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const paymentResult = await paymentResponse.json();
+      console.log('Payment update response:', paymentResult);
+
+      if (!paymentResponse.ok) {
+        throw new Error(paymentResult.message || 'Failed to process payment');
+      }
+
+      // Generate and download the receipt
+      generatePDF(newOrderId);
+      
+      // Clear the cart after successful order and payment
+      await clearCart();
+      
+      setProcessing(false);
+      // Show success dialog
+      setPaymentSuccessDialog(true);
+      setNotification({
+        type: 'success',
+        message: 'Payment successful! Your order has been placed and receipt downloaded.'
+      });
+      
+    } catch (error) {
+      console.error("Error during payment process:", error);
+      setProcessing(false);
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'There was an issue processing your payment.'
+      });
+    }
   };
 
   // Generate and download PDF receipt
@@ -838,7 +915,7 @@ export default function CartPage() {
                 )}
 
                 <ListItem sx={{ py: 1, px: 0 }}>
-                  <ListItemText primary="Tax (7%)" />
+                  <ListItemText primary="Tax (2%)" />
                   <Typography variant="body1">৳{tax.toFixed(2)}</Typography>
                 </ListItem>
 

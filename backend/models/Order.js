@@ -49,7 +49,7 @@ const OrderSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     required: [true, 'Payment method is required'],
-    enum: ['creditCard', 'paypal', 'stripe']
+    enum: ['creditCard', 'paypal', 'stripe', 'bkash', 'nagad']
   },
   paymentResult: {
     id: String,
@@ -86,6 +86,9 @@ const OrderSchema = new mongoose.Schema({
     default: false
   },
   deliveredAt: {
+    type: Date
+  },
+  approvedAt: {
     type: Date
   },
   status: {

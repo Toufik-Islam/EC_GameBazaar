@@ -51,12 +51,32 @@ interface Game {
   installationTutorial?: string;
 }
 
+interface OrderItem {
+  game: {
+    _id: string;
+    title: string;
+    images?: string[];
+  };
+  quantity: number;
+  price: number;
+}
+
+interface OrderUser {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 interface Order {
-  id: string;
-  customerName: string;
-  status: 'pending' | 'completed';
-  items: Game[];
-  total: number;
+  _id: string;
+  user: OrderUser;
+  orderItems: OrderItem[];
+  totalPrice: number;
+  status: string;
+  isPaid: boolean;
+  paidAt: string;
+  createdAt: string;
+  approvedAt?: string;
 }
 
 export default function AdminDashboard() {
@@ -69,29 +89,20 @@ export default function AdminDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
-  // Mock data for orders - replace with real API calls
-  const pendingOrders: Order[] = [
-    {
-      id: '1',
-      customerName: 'John Doe',
-      status: 'pending',
-      items: [{ _id: '1', title: 'Game 1', price: 59.99, description: 'Action game' }],
-      total: 59.99
-    }
-  ];
-
-  const completedOrders: Order[] = [
-    {
-      id: '2',
-      customerName: 'Jane Smith',
-      status: 'completed',
-      items: [{ _id: '2', title: 'Game 2', price: 49.99, description: 'RPG game' }],
-      total: 49.99
-    }
-  ];
+  // State for real order data
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    // Load appropriate data when tab changes
+    if (newValue === 1) {
+      fetchPendingOrders();
+    } else if (newValue === 2) {
+      fetchCompletedOrders();
+    }
   };
 
   const [games, setGames] = useState<Game[]>([]);
@@ -114,6 +125,124 @@ export default function AdminDashboard() {
     onSale: false,
     discountPrice: ''
   });
+
+  // Fetch pending orders
+  const fetchPendingOrders = useCallback(async () => {
+    try {
+      setOrderLoading(true);
+      setOrderError(null);
+      console.log('Fetching pending orders...');
+      
+      const response = await fetch('/api/orders/pending', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Get the response data, handling both success and error cases
+      const data = await response.json();
+      console.log('Pending orders API response:', data);
+      
+      if (!response.ok) {
+        const errorMsg = data.message || `HTTP error! Status: ${response.status}`;
+        throw new Error(errorMsg);
+      }
+
+      if (data.success) {
+        setPendingOrders(data.data);
+        console.log(`Found ${data.count} pending orders`);
+      } else {
+        setOrderError(data.message || 'Failed to fetch pending orders');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error fetching pending orders:', errorMessage);
+      
+      // Display a more user-friendly error
+      setOrderError(`Error fetching pending orders: ${errorMessage}`);
+    } finally {
+      setOrderLoading(false);
+    }
+  }, [token]);
+
+  // Fetch completed/processed orders
+  const fetchCompletedOrders = useCallback(async () => {
+    try {
+      setOrderLoading(true);
+      setOrderError(null);
+      
+      const response = await fetch('/api/orders', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Filter for non-pending orders (completed, shipped, delivered)
+        const processed = data.data.filter(
+          (order: Order) => order.status !== 'pending' && order.status !== 'cancelled'
+        );
+        setCompletedOrders(processed);
+      } else {
+        setOrderError(data.message || 'Failed to fetch orders');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error fetching completed orders:', errorMessage);
+      setOrderError('Error fetching completed orders');
+    } finally {
+      setOrderLoading(false);
+    }
+  }, [token]);
+
+  // Approve order
+  const approveOrder = async (orderId: string) => {
+    try {
+      setOrderLoading(true);
+      setOrderError(null);
+      console.log(`Approving order ${orderId}...`);
+      
+      const response = await fetch(`/api/orders/${orderId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Order approval response:', data);
+      
+      if (data.success) {
+        setSuccess('Order approved successfully');
+        
+        // Remove the approved order from pending and add to completed
+        setPendingOrders(pendingOrders.filter(order => order._id !== orderId));
+        
+        // Refresh both lists to ensure data is current
+        fetchPendingOrders();
+        fetchCompletedOrders();
+      } else {
+        setOrderError(data.message || 'Failed to approve order');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error approving order:', errorMessage);
+      setOrderError('Error approving order');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
 
   // Fetch games from the API
   const fetchGames = useCallback(async () => {
@@ -444,7 +573,7 @@ export default function AdminDashboard() {
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Game Management" />
           <Tab label="Pending Orders" />
-          <Tab label="Completed Orders" />
+          <Tab label="Processed Orders" />
         </Tabs>
       </Box>
 
@@ -1007,36 +1136,144 @@ export default function AdminDashboard() {
       )}
 
       {tabValue === 1 && (
-        <List>
-          {pendingOrders.map((order) => (
-            <Paper key={order.id} sx={{ mb: 2, p: 2 }}>
-              <ListItem>
-                <ListItemText
-                  primary={`Order #${order.id} - ${order.customerName}`}
-                  secondary={`Total: $${order.total}`}
-                />
-                <Button variant="contained" color="primary">
-                  Approve Order
-                </Button>
-              </ListItem>
-            </Paper>
-          ))}
-        </List>
+        <Box>
+          {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
+          
+          {orderLoading ? (
+            <CircularProgress />
+          ) : pendingOrders.length === 0 ? (
+            <Alert severity="info">No pending orders found</Alert>
+          ) : (
+            <List>
+              {pendingOrders.map((order) => (
+                <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
+                  <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <ListItemText
+                      primary={
+                        <Typography variant="h6">
+                          Order #{order._id.substring(0, 8)} - {order.user.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Email: {order.user.email}
+                          </Typography>
+                          <br />
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Ordered on: {new Date(order.createdAt).toLocaleString()}
+                          </Typography>
+                          <br />
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Paid on: {new Date(order.paidAt).toLocaleString()}
+                          </Typography>
+                          <br />
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Total: ৳{order.totalPrice.toFixed(2)}
+                          </Typography>
+                        </>
+                      }
+                    />
+                    
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
+                    <List dense sx={{ width: '100%' }}>
+                      {order.orderItems.map((item, index) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={item.game.title}
+                            secondary={`Quantity: ${item.quantity} x ${item.price.toFixed(2)}/=`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', mt: 2 }}>
+                      <Button 
+                        variant="contained" 
+                        color="primary"
+                        onClick={() => approveOrder(order._id)}
+                        disabled={orderLoading}
+                      >
+                        {orderLoading ? <CircularProgress size={24} /> : 'Approve Order'}
+                      </Button>
+                    </Box>
+                  </ListItem>
+                </Paper>
+              ))}
+            </List>
+          )}
+        </Box>
       )}
 
       {tabValue === 2 && (
-        <List>
-          {completedOrders.map((order) => (
-            <Paper key={order.id} sx={{ mb: 2, p: 2 }}>
-              <ListItem>
-                <ListItemText
-                  primary={`Order #${order.id} - ${order.customerName}`}
-                  secondary={`Total: $${order.total}`}
-                />
-              </ListItem>
-            </Paper>
-          ))}
-        </List>
+        <Box>
+          {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
+          
+          {orderLoading ? (
+            <CircularProgress />
+          ) : completedOrders.length === 0 ? (
+            <Alert severity="info">No processed orders found</Alert>
+          ) : (
+            <List>
+              {completedOrders.map((order) => (
+                <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
+                  <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <ListItemText
+                      primary={
+                        <Typography variant="h6">
+                          Order #{order._id.substring(0, 8)} - {order.user.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Status: <Chip label={order.status} color={
+                              order.status === 'processing' ? 'primary' :
+                              order.status === 'shipped' ? 'secondary' :
+                              order.status === 'delivered' ? 'success' : 'default'
+                            } size="small" />
+                          </Typography>
+                          <br />
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Email: {order.user.email}
+                          </Typography>
+                          <br />
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Ordered on: {new Date(order.createdAt).toLocaleString()}
+                          </Typography>
+                          <br />
+                          {order.approvedAt && (
+                            <>
+                              <Typography component="span" variant="body2" color="text.primary">
+                                Approved on: {new Date(order.approvedAt).toLocaleString()}
+                              </Typography>
+                              <br />
+                            </>
+                          )}
+                          <Typography component="span" variant="body2" color="text.primary">
+                            Total: ৳{order.totalPrice.toFixed(2)}
+                          </Typography>
+                        </>
+                      }
+                    />
+                    
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
+                    <List dense sx={{ width: '100%' }}>
+                      {order.orderItems.map((item, index) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={item.game.title}
+                            secondary={`Quantity: ${item.quantity} x ${item.price.toFixed(2)}/=`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </ListItem>
+                </Paper>
+              ))}
+            </List>
+          )}
+        </Box>
       )}
     </Container>
   );

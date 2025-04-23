@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Container,
@@ -6,11 +6,8 @@ import {
   Box,
   Paper,
   Grid,
-  Card,
-  CardContent,
   Chip,
   Button,
-  Divider,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -22,7 +19,9 @@ import {
   TableRow,
   TextField,
   InputAdornment,
-  IconButton
+  IconButton,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   ExpandMore,
@@ -31,66 +30,87 @@ import {
   FilterList,
   GetApp
 } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 
-// Mock order data
-const MOCK_ORDERS = [
-  {
-    id: "ORD-2023-1001",
-    date: "2023-06-15",
-    status: "Completed",
-    total: 84.98,
-    paymentMethod: "Credit Card (**** 4321)",
-    items: [
-      {
-        id: 1,
-        title: "Cyber Adventure 2077",
-        price: 49.99,
-        image: "https://via.placeholder.com/50x50?text=CA"
-      },
-      {
-        id: 5,
-        title: "Racing Evolution",
-        price: 34.99,
-        image: "https://via.placeholder.com/50x50?text=RE"
-      }
-    ]
-  },
-  {
-    id: "ORD-2023-0842",
-    date: "2023-05-20",
-    status: "Completed",
-    total: 19.99,
-    paymentMethod: "PayPal (user@example.com)",
-    items: [
-      {
-        id: 6,
-        title: "Puzzle Master",
-        price: 19.99,
-        image: "https://via.placeholder.com/50x50?text=PM"
-      }
-    ]
-  },
-  {
-    id: "ORD-2023-0715",
-    date: "2023-04-10",
-    status: "Completed",
-    total: 39.99,
-    paymentMethod: "Credit Card (**** 8765)",
-    items: [
-      {
-        id: 2,
-        title: "Fantasy Quest III",
-        price: 39.99,
-        image: "https://via.placeholder.com/50x50?text=FQ"
-      }
-    ]
-  }
-];
+// Define TypeScript interfaces for our data
+interface OrderItem {
+  game: {
+    _id: string;
+    title: string;
+    images: string[];
+    price: number;
+    discountPrice?: number;
+  };
+  quantity: number;
+  price: number;
+}
+
+interface Order {
+  _id: string;
+  createdAt: string;
+  status: string;
+  isPaid: boolean;
+  paidAt?: string;
+  totalPrice: number;
+  paymentMethod: string;
+  paymentResult?: {
+    id: string;
+    status: string;
+    email_address?: string;
+  };
+  orderItems: OrderItem[];
+}
 
 export default function OrderHistoryPage() {
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | false>(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { user, token } = useAuth();
+
+  // Fetch user's orders from the backend
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user || !token) {
+        setError("Please log in to view your orders");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/orders/myorders', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to fetch your orders');
+        }
+
+        if (data.success) {
+          console.log('Fetched orders:', data.data);
+          setOrders(data.data);
+        } else {
+          setError(data.message || 'Something went wrong');
+        }
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch your orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user, token]);
 
   const handleAccordionChange = (orderId: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedOrder(isExpanded ? orderId : false);
@@ -102,20 +122,47 @@ export default function OrderHistoryPage() {
 
   // Filter orders based on search term
   const filteredOrders = orders.filter(order => 
-    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.items.some(item => item.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.orderItems.some(item => item.game.title.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed':
+      case 'delivered':
         return 'success';
-      case 'Processing':
+      case 'processing':
         return 'info';
-      case 'Cancelled':
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
         return 'error';
       default:
         return 'default';
+    }
+  };
+
+  // Format date to readable format
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Format payment method for display
+  const formatPaymentMethod = (method: string, result?: any) => {
+    switch (method) {
+      case 'creditCard':
+        return `Credit Card ${result?.id ? `(${result.id})` : ''}`;
+      case 'paypal':
+        return `PayPal ${result?.email_address ? `(${result.email_address})` : ''}`;
+      case 'bkash':
+        return `bKash ${result?.id ? `(${result.id})` : ''}`;
+      case 'nagad':
+        return `Nagad ${result?.id ? `(${result.id})` : ''}`;
+      default:
+        return method;
     }
   };
 
@@ -154,38 +201,44 @@ export default function OrderHistoryPage() {
           </Grid>
         </Grid>
       </Paper>
-      
-      {filteredOrders.length > 0 ? (
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+      ) : filteredOrders.length > 0 ? (
         filteredOrders.map((order) => (
           <Accordion 
-            key={order.id} 
-            expanded={expandedOrder === order.id}
-            onChange={handleAccordionChange(order.id)}
+            key={order._id} 
+            expanded={expandedOrder === order._id}
+            onChange={handleAccordionChange(order._id)}
             sx={{ mb: 2 }}
           >
             <AccordionSummary expandIcon={<ExpandMore />}>
               <Grid container alignItems="center" spacing={2}>
                 <Grid item xs={12} sm={3}>
                   <Typography variant="subtitle1">
-                    {order.id}
+                    {order._id.substring(0, 10)}...
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {order.date}
+                    {formatDate(order.createdAt)}
                   </Typography>
                 </Grid>
                 <Grid item xs={6} sm={3}>
                   <Chip 
-                    label={order.status} 
-                    color={getStatusColor(order.status) as "success" | "info" | "error" | "default"} 
+                    label={order.status.charAt(0).toUpperCase() + order.status.slice(1)} 
+                    color={getStatusColor(order.status) as "success" | "info" | "warning" | "error" | "default"} 
                     size="small" 
                   />
                 </Grid>
                 <Grid item xs={6} sm={3}>
                   <Typography variant="subtitle1">
-                    ৳{order.total.toFixed(2)}
+                    ৳{order.totalPrice.toFixed(2)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                    {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={3} sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -204,19 +257,19 @@ export default function OrderHistoryPage() {
                 <Grid container spacing={2} sx={{ mb: 3 }}>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Order Date</Typography>
-                    <Typography variant="body1">{order.date}</Typography>
+                    <Typography variant="body1">{formatDate(order.createdAt)}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Order Status</Typography>
-                    <Typography variant="body1">{order.status}</Typography>
+                    <Typography variant="body1">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Payment Method</Typography>
-                    <Typography variant="body1">{order.paymentMethod}</Typography>
+                    <Typography variant="body1">{formatPaymentMethod(order.paymentMethod, order.paymentResult)}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="subtitle2">Total Amount</Typography>
-                    <Typography variant="body1">৳{order.total.toFixed(2)}</Typography>
+                    <Typography variant="body1">৳{order.totalPrice.toFixed(2)}</Typography>
                   </Grid>
                 </Grid>
                 
@@ -229,35 +282,37 @@ export default function OrderHistoryPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>Product</TableCell>
+                        <TableCell>Quantity</TableCell>
                         <TableCell>Price</TableCell>
                         <TableCell align="right">Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {order.items.map((item) => (
-                        <TableRow key={item.id}>
+                      {order.orderItems.map((item, index) => (
+                        <TableRow key={index}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Box
                                 component="img"
-                                src={item.image}
-                                alt={item.title}
+                                src={item.game.images[0] || 'https://via.placeholder.com/40x40?text=Game'}
+                                alt={item.game.title}
                                 sx={{ width: 40, height: 40, mr: 2, borderRadius: 1 }}
                               />
                               <Typography variant="body1">
-                                <Link to={`/game/${item.id}`} style={{ color: 'inherit' }}>
-                                  {item.title}
+                                <Link to={`/game/${item.game._id}`} style={{ color: 'inherit' }}>
+                                  {item.game.title}
                                 </Link>
                               </Typography>
                             </Box>
                           </TableCell>
+                          <TableCell>{item.quantity}</TableCell>
                           <TableCell>৳{item.price.toFixed(2)}</TableCell>
                           <TableCell align="right">
                             <Button
                               size="small"
                               startIcon={<GetApp />}
                               component={Link}
-                              to={`/game/${item.id}`}
+                              to={`/game/${item.game._id}`}
                             >
                               Download
                             </Button>
