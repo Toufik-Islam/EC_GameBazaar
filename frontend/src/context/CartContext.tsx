@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 interface CartItem {
@@ -38,18 +38,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>({ items: [], totalPrice: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch cart on mount or when user changes
-  useEffect(() => {
-    if (user) {
-      fetchCart();
-    } else {
-      // Clear cart when user logs out
-      setCart({ items: [], totalPrice: 0 });
-    }
-  }, [user]);
-
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!token) return;
     
     try {
@@ -64,18 +53,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data) {
         setCart(data.data);
       } else {
         setError(data.message || 'Failed to fetch cart');
+        setCart({ items: [], totalPrice: 0 });
       }
     } catch (err) {
       setError('Error connecting to server');
+      setCart({ items: [], totalPrice: 0 });
       console.error('Error fetching cart:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  // Fetch cart on mount or when user changes
+  useEffect(() => {
+    if (user && token) {
+      fetchCart();
+    } else {
+      // Clear cart when user logs out
+      setCart({ items: [], totalPrice: 0 });
+    }
+  }, [user, token, fetchCart]);
 
   const addToCart = async (gameId: string, quantity: number) => {
     if (!token) return;
@@ -91,11 +92,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ gameId, quantity })
-      });
-
-      const data = await response.json();
+      });      const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data) {
         setCart(data.data);
       } else {
         setError(data.message || 'Failed to add item to cart');
@@ -122,11 +121,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ quantity })
-      });
-
-      const data = await response.json();
+      });      const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data) {
         setCart(data.data);
       } else {
         setError(data.message || 'Failed to update cart item');
@@ -151,11 +148,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      });
-
-      const data = await response.json();
+      });      const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data) {
         setCart(data.data);
       } else {
         setError(data.message || 'Failed to remove item from cart');
@@ -180,11 +175,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      });
-
-      const data = await response.json();
+      });      const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.data) {
         setCart(data.data);
       } else {
         setError(data.message || 'Failed to clear cart');

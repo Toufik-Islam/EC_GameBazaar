@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminRoute } from './components/AdminRoute';
 import { AuthRoute } from './components/AuthRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Header from './components/layout/Header';
@@ -58,16 +59,16 @@ export default function App() {
             <ThemeProvider theme={theme}>
               <CssBaseline />
               <div className="app-container">
-                <Header />
-                <main className="main-content">
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/game/:id" element={<GameDetailsPage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/profile" element={
-                      <AuthRoute>
+                <Header />                <main className="main-content">
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/game/:id" element={<GameDetailsPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/profile" element={
+                        <AuthRoute>
                         <ProfilePage />
                       </AuthRoute>
                     } />
@@ -87,9 +88,9 @@ export default function App() {
                     <Route path="/shipping" element={<ShippingInfoPage />} />
                     <Route path="/returns" element={<ReturnsRefundsPage />} />
                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                    <Route path="/support" element={<SupportPage />} />
-                    <Route path="/help-center" element={<HelpCenterPage />} />
+                    <Route path="/support" element={<SupportPage />} />                    <Route path="/help-center" element={<HelpCenterPage />} />
                   </Routes>
+                  </ErrorBoundary>
                 </main>
                 <Footer />
               </div>

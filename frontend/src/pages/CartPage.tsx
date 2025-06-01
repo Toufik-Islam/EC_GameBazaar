@@ -640,11 +640,12 @@ export default function CartPage() {
   const closeNotification = () => {
     setNotification(null);
   };
-
-  // Calculate totals
-  const subtotal = cart.items.reduce((total, item) => {
-    return total + item.price * item.quantity;
-  }, 0);
+  // Calculate totals with null checks
+  const subtotal = cart?.items?.reduce((total, item) => {
+    if (!item || !item.game) return total;
+    const itemPrice = item.game.discountPrice || item.game.price || 0;
+    return total + (itemPrice * (item.quantity || 0));
+  }, 0) || 0;
 
   const discountAmount = promoApplied ? (subtotal * promoDiscount / 100) : 0;
   const tax = (subtotal - discountAmount) * 0.02; // 2% tax
@@ -669,18 +670,15 @@ export default function CartPage() {
   }
 
   return (
-    <Container maxWidth="lg">
-      <Snackbar 
+    <Container maxWidth="lg">      <Snackbar 
         open={notification !== null} 
         autoHideDuration={6000} 
         onClose={closeNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {notification && (
-          <Alert onClose={closeNotification} severity={notification.type}>
-            {notification.message}
-          </Alert>
-        )}
+        <Alert onClose={closeNotification} severity={notification?.type || 'info'}>
+          {notification?.message || ''}
+        </Alert>
       </Snackbar>
 
       <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
@@ -758,26 +756,25 @@ export default function CartPage() {
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
           <CircularProgress />
-        </Box>
-      ) : cart.items.length > 0 ? (
+        </Box>      ) : cart?.items && cart.items.length > 0 ? (
         <Grid container spacing={3}>
           {/* Cart Items */}
           <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2, mb: 3 }}>
-              {cart.items.map((item) => (
+            <Paper sx={{ p: 2, mb: 3 }}>              {cart.items.filter(item => item && item.game).map((item) => {                
+                return (
                 <Box key={item._id}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={3} sm={2}>
                       <CardMedia
                         component="img"
-                        image={item.game.images[0] || 'https://via.placeholder.com/300x200?text=Game+Image'}
-                        alt={item.game.title}
+                        image={(item.game.images && item.game.images[0]) || 'https://via.placeholder.com/300x200?text=Game+Image'}
+                        alt={item.game.title || 'Game Image'}
                         sx={{ borderRadius: 1 }}
                       />
                     </Grid>
                     <Grid item xs={9} sm={4}>
                       <Typography variant="subtitle1" component={Link} to={`/game/${item.game._id}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
-                        {item.game.title}
+                        {item.game.title || 'Unknown Game'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Digital Download
@@ -809,20 +806,19 @@ export default function CartPage() {
                           <Add fontSize="small" />
                         </IconButton>
                       </Box>
-                    </Grid>
-                    <Grid item xs={4} sm={2} sx={{ textAlign: 'right' }}>
+                    </Grid>                    <Grid item xs={4} sm={2} sx={{ textAlign: 'right' }}>
                       {item.game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ৳{item.game.price.toFixed(2)}
+                            ৳{(item.game.price || 0).toFixed(2)}
                           </Typography>
                           <Typography variant="subtitle1" color="error.main">
-                            ৳{item.game.discountPrice.toFixed(2)}
+                            ৳{(item.game.discountPrice || 0).toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="subtitle1">
-                          ৳{item.game.price.toFixed(2)}
+                          ৳{(item.game.price || 0).toFixed(2)}
                         </Typography>
                       )}
                     </Grid>
@@ -838,7 +834,8 @@ export default function CartPage() {
                   </Grid>
                   <Divider sx={{ my: 2 }} />
                 </Box>
-              ))}
+                );
+              })}
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                 <Button 
@@ -982,11 +979,10 @@ export default function CartPage() {
             You can download your receipt by clicking the button below.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button
+        <DialogActions>          <Button
             variant="contained"
             startIcon={<Download />}
-            onClick={generatePDF}
+            onClick={() => generatePDF(orderId)}
           >
             Download Receipt
           </Button>

@@ -92,42 +92,38 @@ export default function WishlistPage() {
       <Typography variant="h4" component="h1" gutterBottom>
         My Wishlist
       </Typography>
-      
-      <Snackbar 
+        <Snackbar 
         open={notification !== null} 
         autoHideDuration={6000} 
         onClose={closeNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {notification && (
-          <Alert onClose={closeNotification} severity={notification.type}>
-            {notification.message}
-          </Alert>
-        )}
+        <Alert onClose={closeNotification} severity={notification?.type || 'info'}>
+          {notification?.message || ''}
+        </Alert>
       </Snackbar>
       
       {wishlistLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
           <CircularProgress />
-        </Box>
-      ) : wishlist.games.length > 0 ? (
-        <Grid container spacing={3}>
-          {wishlist.games.map((game) => (
+        </Box>      ) : wishlist?.games && wishlist.games.length > 0 ? (
+        <Grid container spacing={3}>          {wishlist.games.filter(game => game).map((game) => {            
+            return (
             <Grid item xs={12} sm={6} md={4} key={game._id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Link to={`/game/${game._id}`}>
                   <CardMedia
                     component="img"
                     height="140"
-                    image={game.images[0] || 'https://via.placeholder.com/300x200?text=Game+Image'}
-                    alt={game.title}
+                    image={(game.images && game.images[0]) || 'https://via.placeholder.com/300x200?text=Game+Image'}
+                    alt={game.title || 'Game Image'}
                   />
                 </Link>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ mb: 2 }}>
                     <Typography gutterBottom variant="h6" component="h2">
                       <Link to={`/game/${game._id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                        {game.title}
+                        {game.title || 'Unknown Game'}
                       </Link>
                     </Typography>
                     {/* Rating would come from the API in a real app */}
@@ -138,7 +134,7 @@ export default function WishlistPage() {
                       </Typography>
                     </Box>
                     {game.genre?.map(g => (
-                      <Chip 
+                      <Chip
                         key={g}
                         label={g} 
                         size="small" 
@@ -151,21 +147,20 @@ export default function WishlistPage() {
                   </Box>
                   
                   <Divider sx={{ mb: 2 }} />
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                       {game.discountPrice ? (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            ৳{game.price.toFixed(2)}
+                            ৳{(game.price || 0).toFixed(2)}
                           </Typography>
                           <Typography variant="h6" color="error.main">
-                            ৳{game.discountPrice.toFixed(2)}
+                            ৳{(game.discountPrice || 0).toFixed(2)}
                           </Typography>
                         </>
                       ) : (
                         <Typography variant="h6">
-                          ৳{game.price.toFixed(2)}
+                          ৳{(game.price || 0).toFixed(2)}
                         </Typography>
                       )}
                     </Box>
@@ -199,12 +194,12 @@ export default function WishlistPage() {
                     onClick={() => handleAddToCart(game._id)}
                     disabled={itemProcessing === game._id || cartLoading}
                   >
-                    {itemProcessing === game._id && cartLoading ? 'Adding...' : 'Add to Cart'}
-                  </Button>
+                    {itemProcessing === game._id && cartLoading ? 'Adding...' : 'Add to Cart'}                  </Button>
                 </CardContent>
               </Card>
             </Grid>
-          ))}
+            );
+          })}
         </Grid>
       ) : (
         <Box sx={{ textAlign: 'center', py: 5 }}>

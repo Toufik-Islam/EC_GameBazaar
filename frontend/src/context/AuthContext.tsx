@@ -3,6 +3,8 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 interface User {
   id: string;
   username: string;
+  name?: string;
+  email?: string;
   role: 'admin' | 'user';
   token?: string; // Add token to user object for easier access
 }

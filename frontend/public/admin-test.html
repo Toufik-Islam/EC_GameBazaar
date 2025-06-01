@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Orders Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Admin Dashboard Orders Test</h1>
+    
+    <div class="section info">
+        <h2>Test Status</h2>
+        <div id="status">Ready to test...</div>
+    </div>
+
+    <div class="section">
+        <h2>Step 1: Admin Login</h2>
+        <button onclick="testLogin()">Test Admin Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Test Pending Orders</h2>
+        <button onclick="testPendingOrders()">Test Pending Orders</button>
+        <div id="pending-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 3: Test All Orders</h2>
+        <button onclick="testAllOrders()">Test All Orders</button>
+        <div id="all-orders-result"></div>
+    </div>
+
+    <script>
+        let adminToken = null;
+        let adminUserId = null;
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = message;
+            statusDiv.className = type;
+        }
+
+        async function testLogin() {
+            updateStatus('Testing admin login...', 'info');
+            const resultDiv = document.getElementById('login-result');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gamebazaar.com',
+                        password: '123456'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    adminToken = data.token;
+                    adminUserId = data.user._id;
+                    
+                    resultDiv.innerHTML = \`
+                        <div class="success">
+                            <h3>✅ Login Successful!</h3>
+                            <p><strong>Name:</strong> \${data.user.name}</p>
+                            <p><strong>Role:</strong> \${data.user.role}</p>
+                            <p><strong>ID:</strong> \${data.user._id}</p>
+                            <p><strong>Token:</strong> \${data.token.substring(0, 20)}...</p>
+                        </div>
+                    \`;
+                    updateStatus('Admin login successful! Ready to test orders.', 'success');
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = \`
+                    <div class="error">
+                        <h3>❌ Login Failed</h3>
+                        <p>\${error.message}</p>
+                    </div>
+                \`;
+                updateStatus('Admin login failed!', 'error');
+            }
+        }
+
+        async function testPendingOrders() {
+            if (!adminToken) {
+                alert('Please login first!');
+                return;
+            }
+
+            updateStatus('Testing pending orders API...', 'info');
+            const resultDiv = document.getElementById('pending-result');
+            
+            try {
+                const response = await fetch('/api/orders/pending', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': \`Bearer \${adminToken}\`,
+                        'x-user-id': adminUserId
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = \`
+                        <div class="success">
+                            <h3>✅ Pending Orders Retrieved!</h3>
+                            <p><strong>Success:</strong> \${data.success}</p>
+                            <p><strong>Count:</strong> \${data.count}</p>
+                            <p><strong>Orders returned:</strong> \${data.data?.length || 0}</p>
+                            \${data.data && data.data.length > 0 ? \`
+                                <h4>Sample Order:</h4>
+                                <pre>\${JSON.stringify(data.data[0], null, 2)}</pre>
+                            \` : '<p>No pending orders found.</p>'}
+                        </div>
+                    \`;
+                    updateStatus(\`Pending orders test successful! Found \${data.count} orders.\`, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to fetch pending orders');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = \`
+                    <div class="error">
+                        <h3>❌ Pending Orders Failed</h3>
+                        <p>\${error.message}</p>
+                    </div>
+                \`;
+                updateStatus('Pending orders test failed!', 'error');
+            }
+        }
+
+        async function testAllOrders() {
+            if (!adminToken) {
+                alert('Please login first!');
+                return;
+            }
+
+            updateStatus('Testing all orders API...', 'info');
+            const resultDiv = document.getElementById('all-orders-result');
+            
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': \`Bearer \${adminToken}\`,
+                        'x-user-id': adminUserId
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Filter processed orders
+                    const processedOrders = data.data.filter(
+                        order => order.status !== 'pending' && order.status !== 'cancelled'
+                    );
+
+                    // Count by status
+                    const statusCounts = {};
+                    data.data.forEach(order => {
+                        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+                    });
+
+                    resultDiv.innerHTML = \`
+                        <div class="success">
+                            <h3>✅ All Orders Retrieved!</h3>
+                            <p><strong>Success:</strong> \${data.success}</p>
+                            <p><strong>Total Count:</strong> \${data.count}</p>
+                            <p><strong>Processed Orders:</strong> \${processedOrders.length}</p>
+                            <h4>Orders by Status:</h4>
+                            <pre>\${JSON.stringify(statusCounts, null, 2)}</pre>
+                        </div>
+                    \`;
+                    updateStatus(\`All orders test successful! Total: \${data.count}, Processed: \${processedOrders.length}\`, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to fetch all orders');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = \`
+                    <div class="error">
+                        <h3>❌ All Orders Failed</h3>
+                        <p>\${error.message}</p>
+                    </div>
+                \`;
+                updateStatus('All orders test failed!', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

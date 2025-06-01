@@ -49,6 +49,9 @@ interface Game {
   images?: string[];
   systemRequirements?: string;
   installationTutorial?: string;
+  featured?: boolean;
+  onSale?: boolean;
+  discountPrice?: number;
 }
 
 interface OrderItem {
@@ -56,7 +59,7 @@ interface OrderItem {
     _id: string;
     title: string;
     images?: string[];
-  };
+  } | null;
   quantity: number;
   price: number;
 }
@@ -88,7 +91,6 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-
   // State for real order data
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
@@ -125,23 +127,35 @@ export default function AdminDashboard() {
     onSale: false,
     discountPrice: ''
   });
-
   // Fetch pending orders
   const fetchPendingOrders = useCallback(async () => {
     try {
       setOrderLoading(true);
       setOrderError(null);
-      console.log('Fetching pending orders...');
+      console.log('Fetching pending orders...', { token: token ? 'present' : 'missing', userId: user?.id });
       
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Add user ID header for development mode
+      if (user?.id) {
+        headers['x-user-id'] = user.id;
+      }
+
       const response = await fetch('/api/orders/pending', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        method: 'GET',
+        headers
       });
 
       // Get the response data, handling both success and error cases
       const data = await response.json();
-      console.log('Pending orders API response:', data);
+      console.log('Pending orders API response:', { 
+        status: response.status, 
+        ok: response.ok, 
+        data 
+      });
       
       if (!response.ok) {
         const errorMsg = data.message || `HTTP error! Status: ${response.status}`;
@@ -149,8 +163,8 @@ export default function AdminDashboard() {
       }
 
       if (data.success) {
-        setPendingOrders(data.data);
-        console.log(`Found ${data.count} pending orders`);
+        setPendingOrders(data.data || []);
+        console.log(`Successfully loaded ${data.count || 0} pending orders`);
       } else {
         setOrderError(data.message || 'Failed to fetch pending orders');
       }
@@ -163,18 +177,27 @@ export default function AdminDashboard() {
     } finally {
       setOrderLoading(false);
     }
-  }, [token]);
-
+  }, [token, user?.id]);
   // Fetch completed/processed orders
   const fetchCompletedOrders = useCallback(async () => {
     try {
       setOrderLoading(true);
       setOrderError(null);
+      console.log('Fetching completed orders...', { token: token ? 'present' : 'missing', userId: user?.id });
       
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Add user ID header for development mode
+      if (user?.id) {
+        headers['x-user-id'] = user.id;
+      }
+
       const response = await fetch('/api/orders', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        method: 'GET',
+        headers
       });
 
       if (!response.ok) {
@@ -182,13 +205,20 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json();
+      console.log('All orders API response:', { 
+        status: response.status, 
+        ok: response.ok, 
+        totalOrders: data.count,
+        data: data.data?.length ? `${data.data.length} orders` : 'no orders'
+      });
       
       if (data.success) {
-        // Filter for non-pending orders (completed, shipped, delivered)
+        // Filter for non-pending orders (completed, shipped, delivered, processing)
         const processed = data.data.filter(
           (order: Order) => order.status !== 'pending' && order.status !== 'cancelled'
         );
         setCompletedOrders(processed);
+        console.log(`Successfully loaded ${processed.length} processed orders from ${data.count} total orders`);
       } else {
         setOrderError(data.message || 'Failed to fetch orders');
       }
@@ -199,7 +229,7 @@ export default function AdminDashboard() {
     } finally {
       setOrderLoading(false);
     }
-  }, [token]);
+  }, [token, user?.id]);
 
   // Approve order
   const approveOrder = async (orderId: string) => {
@@ -279,17 +309,28 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // Load games on component mount
+  }, []);  // Load games on component mount
   useEffect(() => {
     fetchGames();
     
     // Subscribe to game changes from other components
-    return gameEvents.subscribe(() => {
+    const unsubscribe = gameEvents.subscribe(() => {
       fetchGames();
     });
+    
+    // Return cleanup function
+    return () => {
+      unsubscribe();
+    };
   }, [fetchGames]);
+  // Load orders when component mounts and user is authenticated
+  useEffect(() => {
+    if (isAdmin() && token) {
+      // Load pending orders by default when component mounts
+      console.log('Admin dashboard mounted, loading initial data...');
+      fetchPendingOrders();
+    }
+  }, [token, fetchPendingOrders]); // Remove isAdmin from deps since it's a function
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isThumb: boolean) => {
     const file = e.target.files?.[0];
@@ -1191,13 +1232,12 @@ export default function AdminDashboard() {
                         </>
                       }
                     />
-                    
-                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
                     <List dense sx={{ width: '100%' }}>
                       {order.orderItems.map((item, index) => (
                         <ListItem key={index}>
                           <ListItemText
-                            primary={item.game.title}
+                            primary={item.game?.title || 'Unknown Game (Data Missing)'}
                             secondary={`Quantity: ${item.quantity} x ${item.price.toFixed(2)}/=`}
                           />
                         </ListItem>
@@ -1273,13 +1313,12 @@ export default function AdminDashboard() {
                         </>
                       }
                     />
-                    
-                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Order Items:</Typography>
                     <List dense sx={{ width: '100%' }}>
                       {order.orderItems.map((item, index) => (
                         <ListItem key={index}>
                           <ListItemText
-                            primary={item.game.title}
+                            primary={item.game?.title || 'Unknown Game (Data Missing)'}
                             secondary={`Quantity: ${item.quantity} x ${item.price.toFixed(2)}/=`}
                           />
                         </ListItem>
