@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const notificationUtil = require('../utils/notification');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -23,6 +24,15 @@ exports.register = async (req, res) => {
       password,
       role: role || 'user'
     });
+
+    // Send welcome email (don't block the response if it fails)
+    try {
+      await notificationUtil.sendWelcomeNotification(user);
+      console.log(`✅ Welcome email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send welcome email to ${user.email}:`, emailError);
+      // Continue with registration response even if email fails
+    }
 
     sendTokenResponse(user, 201, res);
   } catch (err) {

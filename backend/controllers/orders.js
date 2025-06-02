@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const Game = require('../models/Game');
+const notificationUtil = require('../utils/notification');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -74,11 +75,39 @@ exports.createOrder = async (req, res) => {
     cart.items = [];
     await cart.save();
 
-    // Return order with populated games
-    const populatedOrder = await Order.findById(order._id).populate({
-      path: 'orderItems.game',
-      select: 'title images'
-    });
+    // Return order with populated games and user
+    const populatedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'orderItems.game',
+        select: 'title images platform'
+      })
+      .populate({
+        path: 'user',
+        select: 'name email'
+      });
+
+    // Send order confirmation email (don't block the response if it fails)
+    try {
+      // Transform order data for email template
+      const emailOrderData = {
+        ...populatedOrder.toObject(),
+        items: populatedOrder.orderItems.map(item => ({
+          name: item.game ? item.game.title : 'Game no longer available',
+          platform: item.game ? item.game.platform : 'N/A',
+          quantity: item.quantity,
+          price: item.price
+        })),
+        totalAmount: populatedOrder.totalPrice,
+        createdAt: populatedOrder.createdAt,
+        status: populatedOrder.status
+      };
+
+      await notificationUtil.sendOrderConfirmationNotification(emailOrderData);
+      console.log(`✅ Order confirmation email sent to ${populatedOrder.user.email}`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send order confirmation email:`, emailError);
+      // Continue with order creation response even if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -222,7 +251,15 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    let order = await Order.findById(req.params.id);
+    let order = await Order.findById(req.params.id)
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .populate({
+        path: 'orderItems.game',
+        select: 'title images platform'
+      });
 
     // Check if order exists
     if (!order) {
@@ -242,6 +279,29 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+
+    // Send status update notification (don't block the response if it fails)
+    try {
+      // Transform order data for email template  
+      const emailOrderData = {
+        ...order.toObject(),
+        items: order.orderItems.map(item => ({
+          name: item.game ? item.game.title : 'Game no longer available',
+          platform: item.game ? item.game.platform : 'N/A',
+          quantity: item.quantity,
+          price: item.price
+        })),
+        totalAmount: order.totalPrice,
+        createdAt: order.createdAt,
+        status: status
+      };
+
+      await notificationUtil.sendOrderStatusNotification(emailOrderData, status);
+      console.log(`✅ Order status update email sent to ${order.user.email} (Status: ${status})`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send order status update email:`, emailError);
+      // Continue with status update response even if email fails
+    }
 
     res.status(200).json({
       success: true,
@@ -311,9 +371,7 @@ exports.updateOrderToPaid = async (req, res) => {
     }
     
     // Mark order as pending for admin approval
-    order.status = 'pending';
-
-    console.log('[Payment Process] Updating order with payment info:', {
+    order.status = 'pending';    console.log('[Payment Process] Updating order with payment info:', {
       orderId: order._id,
       status: 'pending',
       isPaid: true,
@@ -323,7 +381,7 @@ exports.updateOrderToPaid = async (req, res) => {
     await order.save();
     console.log('[Payment Process] Order successfully marked as paid:', order._id);
 
-    // Return the updated order
+    // Return the updated order with populated fields
     const updatedOrder = await Order.findById(order._id)
       .populate({
         path: 'user',
@@ -331,8 +389,31 @@ exports.updateOrderToPaid = async (req, res) => {
       })
       .populate({
         path: 'orderItems.game',
-        select: 'title images'
+        select: 'title images platform'
       });
+
+    // Send payment confirmation notification (don't block the response if it fails)
+    try {
+      // Transform order data for email template  
+      const emailOrderData = {
+        ...updatedOrder.toObject(),
+        items: updatedOrder.orderItems.map(item => ({
+          name: item.game ? item.game.title : 'Game no longer available',
+          platform: item.game ? item.game.platform : 'N/A',
+          quantity: item.quantity,
+          price: item.price
+        })),
+        totalAmount: updatedOrder.totalPrice,
+        createdAt: updatedOrder.createdAt,
+        status: 'pending'
+      };
+
+      await notificationUtil.sendOrderStatusNotification(emailOrderData, 'pending');
+      console.log(`✅ Payment confirmation email sent to ${updatedOrder.user.email}`);
+    } catch (emailError) {
+      console.error(`❌ Failed to send payment confirmation email:`, emailError);
+      // Continue with payment response even if email fails
+    }
 
     res.status(200).json({
       success: true,
@@ -458,10 +539,8 @@ exports.approveOrder = async (req, res) => {
         success: false,
         message: 'Only pending and paid orders can be approved'
       });
-    }
-
-    // Update status to completed (changed from 'processing')
-    order.status = 'completed';
+    }    // Update status to processing (this is the valid enum value after approval)
+    order.status = 'processing';
     
     // Record approval timestamp
     order.approvedAt = Date.now();
@@ -473,7 +552,7 @@ exports.approveOrder = async (req, res) => {
     };
 
     await order.save();
-    console.log('[Admin Panel] Order marked as completed:', order._id.toString());
+    console.log('[Admin Panel] Order marked as processing (approved):', order._id.toString());
 
     // Return the updated order with populated fields
     const approvedOrder = await Order.findById(order._id)
@@ -483,19 +562,28 @@ exports.approveOrder = async (req, res) => {
       })
       .populate({
         path: 'orderItems.game',
-        select: 'title images'
+        select: 'title images platform'
       });
 
     // Notify the user about order approval - do this safely
     try {
-      // Import notification utility here
-      const notificationUtil = require('../utils/notification');
-      if (notificationUtil && typeof notificationUtil.sendOrderStatusNotification === 'function') {
-        await notificationUtil.sendOrderStatusNotification(approvedOrder, 'completed');
-        console.log('[Admin Panel] Order approval notification sent');
-      } else {
-        console.log('[Admin Panel] Notification utility not available or invalid');
-      }
+      // Transform order data for email template  
+      const emailOrderData = {
+        ...approvedOrder.toObject(),
+        items: approvedOrder.orderItems.map(item => ({
+          name: item.game ? item.game.title : 'Game no longer available',
+          platform: item.game ? item.game.platform : 'N/A',
+          quantity: item.quantity,
+          price: item.price
+        })),
+        totalAmount: approvedOrder.totalPrice,
+        createdAt: approvedOrder.createdAt,
+        status: 'processing'
+      };
+
+      // Send email with 'approved' status for user-friendly message, but order status is 'processing'
+      await notificationUtil.sendOrderStatusNotification(emailOrderData, 'approved');
+      console.log('[Admin Panel] Order approval notification sent');
     } catch (notificationError) {
       console.error('[Admin Panel] Failed to send order approval notification:', notificationError);
       // Continue with the response even if notification fails
