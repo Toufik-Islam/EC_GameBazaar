@@ -26,7 +26,10 @@ import {
   Menu,
   MenuItem,
   Collapse,
-  Stack
+  Stack,
+  Modal,
+  Backdrop,
+  Fade
 } from '@mui/material';
 import {
   Favorite,
@@ -46,7 +49,9 @@ import {
   Edit,
   Send,
   ExpandMore,
-  ExpandLess
+  ExpandLess,
+  Close,
+  ZoomIn
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -145,12 +150,18 @@ export default function GameDetailsPage() {
   // Menu state for review options
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [currentReviewId, setCurrentReviewId] = useState<string | null>(null);
-  
-  // Edit review state
+    // Edit review state
   const [isEditing, setIsEditing] = useState(false);
   const [editReviewId, setEditReviewId] = useState<string | null>(null);
   const [editReviewText, setEditReviewText] = useState('');
   const [editReviewRating, setEditReviewRating] =useState<number | null>(null);
+  
+  // Zoom modal state
+  const [zoomModal, setZoomModal] = useState({
+    open: false,
+    imageUrl: '',
+    imageTitle: ''
+  });
   
   // Context hooks
   const { user } = useAuth();
@@ -631,9 +642,25 @@ export default function GameDetailsPage() {
       day: 'numeric'
     });
   };
-  
-  const closeNotification = () => {
+    const closeNotification = () => {
     setNotification(null);
+  };
+  
+  // Zoom modal handlers
+  const handleImageClick = (imageUrl: string, imageTitle: string) => {
+    setZoomModal({
+      open: true,
+      imageUrl,
+      imageTitle
+    });
+  };
+
+  const handleCloseZoom = () => {
+    setZoomModal({
+      open: false,
+      imageUrl: '',
+      imageTitle: ''
+    });
   };
   
   // Scroll to reviews tab
@@ -718,8 +745,7 @@ export default function GameDetailsPage() {
       {/* Game Images and Purchase Info */}
       <Grid container spacing={4}>
         {/* Images Section */}
-        <Grid item xs={12} md={8}>
-          <Box sx={{ mb: 2 }}>
+        <Grid item xs={12} md={8}>          <Box sx={{ mb: 2, position: 'relative' }}>
             <Box
               component="img"
               src={game.images && game.images.length > 0 
@@ -731,29 +757,106 @@ export default function GameDetailsPage() {
                 height: 'auto',
                 borderRadius: 1,
                 boxShadow: 3,
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'scale(1.02)'
+                }
               }}
+              onClick={() => handleImageClick(
+                game.images && game.images.length > 0 
+                  ? game.images[selectedImage] 
+                  : 'https://via.placeholder.com/800x450?text=No+Image+Available',
+                `${game.title} - Screenshot ${selectedImage + 1}`
+              )}
             />
+            {/* Zoom indicator overlay */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                opacity: 0.7,
+                transition: 'opacity 0.2s',
+                '&:hover': {
+                  opacity: 1
+                }
+              }}
+              onClick={() => handleImageClick(
+                game.images && game.images.length > 0 
+                  ? game.images[selectedImage] 
+                  : 'https://via.placeholder.com/800x450?text=No+Image+Available',
+                `${game.title} - Screenshot ${selectedImage + 1}`
+              )}
+            >
+              <ZoomIn sx={{ color: 'white', fontSize: 20 }} />
+            </Box>
           </Box>
-          
-          {game.images && game.images.length > 1 && (
+            {game.images && game.images.length > 1 && (
             <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
               {game.images.map((image, index) => (
                 <Box
                   key={index}
-                  component="img"
-                  src={image}
-                  alt={`${game.title} thumbnail ${index + 1}`}
-                  sx={{
-                    width: 100,
-                    height: 60,
-                    objectFit: 'cover',
-                    borderRadius: 1,
-                    cursor: 'pointer',
-                    border: index === selectedImage ? '2px solid' : 'none',
-                    borderColor: 'primary.main',
+                  sx={{ 
+                    position: 'relative',
+                    flexShrink: 0,
+                    '&:hover .zoom-overlay': {
+                      opacity: 1
+                    }
                   }}
-                  onClick={() => setSelectedImage(index)}
-                />
+                >
+                  <Box
+                    component="img"
+                    src={image}
+                    alt={`${game.title} thumbnail ${index + 1}`}
+                    sx={{
+                      width: 100,
+                      height: 60,
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      border: index === selectedImage ? '2px solid' : 'none',
+                      borderColor: 'primary.main',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                    onClick={() => setSelectedImage(index)}
+                  />
+                  <Box
+                    className="zoom-overlay"
+                    sx={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      borderRadius: '50%',
+                      width: 20,
+                      height: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      opacity: 0,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageClick(image, `${game.title} - Screenshot ${index + 1}`);
+                    }}
+                  >
+                    <ZoomIn sx={{ color: 'white', fontSize: 12 }} />
+                  </Box>
+                </Box>
               ))}
             </Box>
           )}
@@ -1163,9 +1266,81 @@ export default function GameDetailsPage() {
                 </List>
               </Box>
             )}
-          </TabPanel>
-        </Paper>
+          </TabPanel>        </Paper>
       </Box>
+      
+      {/* Zoom Modal */}
+      <Modal
+        open={zoomModal.open}
+        onClose={handleCloseZoom}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={zoomModal.open}>
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '95%', sm: '90%', md: '80%', lg: '70%' },
+            maxWidth: '1200px',
+            maxHeight: '90vh',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            borderRadius: 2,
+            overflow: 'hidden',
+            outline: 'none'
+          }}>
+            {/* Modal Header */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              p: 2,
+              borderBottom: '1px solid',
+              borderColor: 'divider'
+            }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+                {zoomModal.imageTitle}
+              </Typography>
+              <IconButton 
+                onClick={handleCloseZoom}
+                sx={{ 
+                  color: 'text.secondary',
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+            
+            {/* Modal Content */}
+            <Box sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              maxHeight: 'calc(90vh - 80px)',
+              overflow: 'auto'
+            }}>
+              <Box
+                component="img"
+                src={zoomModal.imageUrl}
+                alt={zoomModal.imageTitle}
+                sx={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: 1
+                }}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Box>
   );
 }

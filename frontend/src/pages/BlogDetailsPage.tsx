@@ -20,7 +20,10 @@ import {
   Divider,
   Card,
   CardMedia,
-  CardContent
+  CardContent,
+  Modal,
+  Backdrop,
+  Fade
 } from '@mui/material';
 import {
   AccessTime,
@@ -32,7 +35,9 @@ import {
   Edit,
   Delete,
   Share,
-  ArrowBack
+  ArrowBack,
+  Close,
+  ZoomIn
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
@@ -108,6 +113,11 @@ export default function BlogDetailsPage() {
     type: '',
     id: '',
     commentId: ''
+  });
+  const [zoomModal, setZoomModal] = useState({
+    open: false,
+    imageUrl: '',
+    imageTitle: ''
   });
 
   useEffect(() => {
@@ -380,6 +390,22 @@ export default function BlogDetailsPage() {
     return colors[type] || 'default';
   };
 
+  const handleImageClick = (imageUrl: string, imageTitle: string) => {
+    setZoomModal({
+      open: true,
+      imageUrl,
+      imageTitle
+    });
+  };
+
+  const handleCloseZoom = () => {
+    setZoomModal({
+      open: false,
+      imageUrl: '',
+      imageTitle: ''
+    });
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -498,9 +524,8 @@ export default function BlogDetailsPage() {
 
       <Grid container spacing={4}>
         {/* Main Content */}
-        <Grid item xs={12} md={8}>
-          {/* Featured Image */}
-          <Box sx={{ mb: 4 }}>
+        <Grid item xs={12} md={8}>          {/* Featured Image */}
+          <Box sx={{ mb: 4, position: 'relative', cursor: 'pointer' }}>
             <img
               src={blog.frontpageImage}
               alt={blog.title}
@@ -511,7 +536,25 @@ export default function BlogDetailsPage() {
                 objectFit: 'cover',
                 borderRadius: '8px'
               }}
+              onClick={() => handleImageClick(blog.frontpageImage, blog.title)}
             />
+            <Box 
+              sx={{ 
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                bgcolor: 'rgba(0,0,0,0.5)',
+                borderRadius: 1,
+                p: 0.5,
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}
+            >
+              <ZoomIn fontSize="small" />
+              <Typography variant="caption">Click to zoom</Typography>
+            </Box>
           </Box>
           
           {/* Blog Content */}
@@ -539,20 +582,50 @@ export default function BlogDetailsPage() {
             <Paper sx={{ p: 3, mb: 4 }}>
               <Typography variant="h6" gutterBottom>
                 Additional Images
-              </Typography>
-              <Grid container spacing={2}>
+              </Typography>              <Grid container spacing={2}>
                 {blog.images.map((image, index) => (
                   <Grid item xs={6} md={4} key={index}>
-                    <img
-                      src={image}
-                      alt={`${blog.title} - Image ${index + 1}`}
-                      style={{
-                        width: '100%',
-                        height: '200px',
-                        objectFit: 'cover',
-                        borderRadius: '8px'
+                    <Box 
+                      sx={{ 
+                        position: 'relative', 
+                        cursor: 'pointer',
+                        '&:hover .zoom-overlay': {
+                          opacity: 1
+                        }
                       }}
-                    />
+                      onClick={() => handleImageClick(image, `${blog.title} - Image ${index + 1}`)}
+                    >
+                      <img
+                        src={image}
+                        alt={`${blog.title} - Image ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '200px',
+                          objectFit: 'cover',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Box 
+                        className="zoom-overlay"
+                        sx={{ 
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          bgcolor: 'rgba(0,0,0,0.3)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          color: 'white'
+                        }}
+                      >
+                        <ZoomIn fontSize="large" />
+                      </Box>
+                    </Box>
                   </Grid>
                 ))}
               </Grid>
@@ -939,7 +1012,78 @@ export default function BlogDetailsPage() {
             Delete
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>      {/* Image Zoom Modal */}
+      <Modal
+        open={zoomModal.open}
+        onClose={handleCloseZoom}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={zoomModal.open}>
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '95%', sm: '90%', md: '80%', lg: '70%' },
+            maxWidth: '1200px',
+            maxHeight: '90vh',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            borderRadius: 2,
+            overflow: 'hidden',
+            outline: 'none'
+          }}>
+            {/* Modal Header */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              p: 2,
+              borderBottom: '1px solid',
+              borderColor: 'divider'
+            }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+                {zoomModal.imageTitle}
+              </Typography>
+              <IconButton 
+                onClick={handleCloseZoom}
+                sx={{ 
+                  color: 'text.secondary',
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+            
+            {/* Modal Content */}
+            <Box sx={{
+              p: 2,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              maxHeight: 'calc(90vh - 80px)',
+              overflow: 'auto'
+            }}>
+              <Box
+                component="img"
+                src={zoomModal.imageUrl}
+                alt={zoomModal.imageTitle}
+                sx={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: 1
+                }}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Container>
   );
 }
