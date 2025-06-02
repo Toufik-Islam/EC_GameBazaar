@@ -15,7 +15,7 @@ import {
   InputAdornment,
   Link 
 } from '@mui/material';
-import { Facebook, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Google, Visibility, VisibilityOff } from '@mui/icons-material';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -142,16 +142,14 @@ export default function LoginPage() {
               <Typography variant="body2" color="text.secondary">
                 OR
               </Typography>
-            </Divider>
-
-            <Grid container spacing={2}>
+            </Divider>            <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={<Facebook />}
+                  startIcon={<Google />}
                 >
-                  Continue with Facebook
+                  Continue with Google
                 </Button>
               </Grid>
             </Grid>

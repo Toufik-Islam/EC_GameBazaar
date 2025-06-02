@@ -21,7 +21,7 @@ import {
   MenuItem,
   SelectChangeEvent
 } from '@mui/material';
-import { Google, Facebook, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Google, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
@@ -377,24 +377,14 @@ export default function RegisterPage() {
                 OR
               </Typography>
             </Divider>
-            
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid container spacing={2}>
+              <Grid item xs={12}>
                 <Button
                   fullWidth
                   variant="outlined"
                   startIcon={<Google />}
                 >
-                  Google
-                </Button>
-              </Grid>
-              <Grid item xs={6}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<Facebook />}
-                >
-                  Facebook
+                  Continue with Google
                 </Button>
               </Grid>
             </Grid>
