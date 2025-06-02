@@ -29,7 +29,7 @@ import {
   Checkbox,
   InputAdornment
 } from '@mui/material';
-import { Delete, Edit } from '@mui/icons-material';
+import { Delete, Edit, Search } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { gameEvents } from '../services/events';
 
@@ -90,13 +90,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  // State for real order data
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);  // State for real order data
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-
+  
+  // Search states for orders
+  const [pendingSearchTerm, setPendingSearchTerm] = useState('');
+  const [completedSearchTerm, setCompletedSearchTerm] = useState('');
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Load appropriate data when tab changes
@@ -106,6 +108,35 @@ export default function AdminDashboard() {
       fetchCompletedOrders();
     }
   };
+
+  // Search handlers for orders
+  const handlePendingSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPendingSearchTerm(e.target.value);
+  };
+
+  const handleCompletedSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCompletedSearchTerm(e.target.value);
+  };
+
+  // Filter functions for orders
+  const filteredPendingOrders = pendingOrders.filter(order => 
+    order._id.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
+    order.user.name.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
+    order.user.email.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
+    order.orderItems.some(item => 
+      item.game && item.game.title.toLowerCase().includes(pendingSearchTerm.toLowerCase())
+    )
+  );
+
+  const filteredCompletedOrders = completedOrders.filter(order => 
+    order._id.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
+    order.user.name.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
+    order.user.email.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
+    order.status.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
+    order.orderItems.some(item => 
+      item.game && item.game.title.toLowerCase().includes(completedSearchTerm.toLowerCase())
+    )
+  );
 
   const [games, setGames] = useState<Game[]>([]);
   const [newGame, setNewGame] = useState({
@@ -1191,19 +1222,40 @@ export default function AdminDashboard() {
             </DialogActions>
           </Dialog>
         </Box>
-      )}
-
-      {tabValue === 1 && (
+      )}      {tabValue === 1 && (
         <Box>
+          {/* Search field for pending orders */}
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <TextField
+              fullWidth
+              placeholder="Search pending orders by ID, customer name, email, or game title..."
+              variant="outlined"
+              size="small"
+              value={pendingSearchTerm}
+              onChange={handlePendingSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Paper>
+
           {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
           
           {orderLoading ? (
             <CircularProgress />
-          ) : pendingOrders.length === 0 ? (
-            <Alert severity="info">No pending orders found</Alert>
+          ) : filteredPendingOrders.length === 0 ? (
+            pendingSearchTerm ? (
+              <Alert severity="info">No pending orders match your search criteria</Alert>
+            ) : (
+              <Alert severity="info">No pending orders found</Alert>
+            )
           ) : (
             <List>
-              {pendingOrders.map((order) => (
+              {filteredPendingOrders.map((order) => (
                 <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
                   <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                     <ListItemText
@@ -1260,19 +1312,40 @@ export default function AdminDashboard() {
             </List>
           )}
         </Box>
-      )}
-
-      {tabValue === 2 && (
+      )}      {tabValue === 2 && (
         <Box>
+          {/* Search field for processed orders */}
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <TextField
+              fullWidth
+              placeholder="Search processed orders by ID, customer name, email, status, or game title..."
+              variant="outlined"
+              size="small"
+              value={completedSearchTerm}
+              onChange={handleCompletedSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Paper>
+
           {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
           
           {orderLoading ? (
             <CircularProgress />
-          ) : completedOrders.length === 0 ? (
-            <Alert severity="info">No processed orders found</Alert>
+          ) : filteredCompletedOrders.length === 0 ? (
+            completedSearchTerm ? (
+              <Alert severity="info">No processed orders match your search criteria</Alert>
+            ) : (
+              <Alert severity="info">No processed orders found</Alert>
+            )
           ) : (
             <List>
-              {completedOrders.map((order) => (
+              {filteredCompletedOrders.map((order) => (
                 <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
                   <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                     <ListItemText
