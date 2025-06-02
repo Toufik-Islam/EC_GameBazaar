@@ -131,14 +131,14 @@ class EmailService {
           <p>Dear ${user.name},</p>
           <p>Your order <strong>${order._id}</strong> status has been updated to: <strong>${newStatus.toUpperCase()}</strong></p>
           <p>Total: ৳${order.totalPrice}</p>
-          ${['approved', 'shipped', 'delivered'].includes(newStatus) ? '<p>📄 Updated PDF receipt attached.</p>' : ''}
+          ${['approved', 'completed', 'shipped', 'delivered'].includes(newStatus) ? '<p>📄 Updated PDF receipt attached.</p>' : ''}
         </body>
         </html>
       `;
       
       let attachments = [];
       
-      if (['approved', 'shipped', 'delivered'].includes(newStatus)) {
+      if (['approved', 'completed', 'shipped', 'delivered'].includes(newStatus)) {
         try {
           const pdfBuffer = await pdfGenerator.generateOrderReceiptPDF(order, user);
           console.log(`📄 Generated PDF receipt for order status update ${order._id} (${newStatus})`);

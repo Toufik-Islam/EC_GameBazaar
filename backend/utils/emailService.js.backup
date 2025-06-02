@@ -408,9 +408,8 @@ class EmailService {
   async sendOrderStatusUpdateEmailWithPDF(order, user, status) {
     try {
       const template = this.getOrderStatusUpdateTemplate(order, user, status);
-      
-      // Generate PDF receipt for approved/completed orders
-      if (status === 'approved' || status === 'completed' || status === 'processing') {
+        // Generate PDF receipt for approved/completed orders
+      if (status === 'approved' || status === 'completed' || status === 'shipped' || status === 'delivered') {
         const pdfBuffer = await pdfGenerator.generateOrderReceiptPDF(order, user);
         
         const attachments = [{

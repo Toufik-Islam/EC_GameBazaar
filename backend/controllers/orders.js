@@ -538,9 +538,8 @@ exports.approveOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Only pending and paid orders can be approved'
-      });
-    }    // Update status to processing (this is the valid enum value after approval)
-    order.status = 'processing';
+      });    }    // Update status to completed (this is the valid enum value after approval)
+    order.status = 'completed';
     
     // Record approval timestamp
     order.approvedAt = Date.now();
@@ -549,10 +548,8 @@ exports.approveOrder = async (req, res) => {
     order.approvedBy = {
       name: adminName || req.user.name,
       email: adminEmail || req.user.email
-    };
-
-    await order.save();
-    console.log('[Admin Panel] Order marked as processing (approved):', order._id.toString());
+    };    await order.save();
+    console.log('[Admin Panel] Order marked as completed (approved):', order._id.toString());
 
     // Return the updated order with populated fields
     const approvedOrder = await Order.findById(order._id)
@@ -575,13 +572,12 @@ exports.approveOrder = async (req, res) => {
           platform: item.game ? item.game.platform : 'N/A',
           quantity: item.quantity,
           price: item.price
-        })),
-        totalAmount: approvedOrder.totalPrice,
+        })),        totalAmount: approvedOrder.totalPrice,
         createdAt: approvedOrder.createdAt,
-        status: 'processing'
+        status: 'completed'
       };
 
-      // Send email with 'approved' status for user-friendly message, but order status is 'processing'
+      // Send email with 'approved' status for user-friendly message, but order status is 'completed'
       await notificationUtil.sendOrderStatusNotification(emailOrderData, 'approved');
       console.log('[Admin Panel] Order approval notification sent');
     } catch (notificationError) {

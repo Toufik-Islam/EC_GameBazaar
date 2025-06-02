@@ -152,8 +152,7 @@ export default function OrderHistoryPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered':
-        return 'success';
-      case 'processing':
+        return 'success';      case 'completed':
         return 'info';
       case 'pending':
         return 'warning';

@@ -244,7 +244,7 @@ export default function AdminDashboard() {
       });
       
       if (data.success) {
-        // Filter for non-pending orders (completed, shipped, delivered, processing)
+        // Filter for non-pending orders (completed, shipped, delivered)
         const processed = data.data.filter(
           (order: Order) => order.status !== 'pending' && order.status !== 'cancelled'
         );
@@ -1355,10 +1355,9 @@ export default function AdminDashboard() {
                         </Typography>
                       }
                       secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
+                        <>                          <Typography component="span" variant="body2" color="text.primary">
                             Status: <Chip label={order.status} color={
-                              order.status === 'processing' ? 'primary' :
+                              order.status === 'completed' ? 'primary' :
                               order.status === 'shipped' ? 'secondary' :
                               order.status === 'delivered' ? 'success' : 'default'
                             } size="small" />

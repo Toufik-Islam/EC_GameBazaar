@@ -176,7 +176,7 @@ class EmailService {
               <p>${statusMessages[newStatus] || 'Your order status has been updated'}</p>
             </div>
             
-            ${(newStatus === 'approved' || newStatus === 'shipped' || newStatus === 'delivered') ? `
+            ${(newStatus === 'approved' || newStatus === 'completed' || newStatus === 'shipped' || newStatus === 'delivered') ? `
               <div class="pdf-note">
                 📄 <strong>Updated PDF Receipt Attached:</strong> We've included an updated PDF receipt with this email for your records.
               </div>
@@ -247,7 +247,7 @@ class EmailService {
       let attachments = [];
       
       // Only attach PDF for certain status updates
-      if (['approved', 'shipped', 'delivered'].includes(newStatus)) {
+      if (['approved', 'completed', 'shipped', 'delivered'].includes(newStatus)) {
         try {
           const pdfBuffer = await pdfGenerator.generateOrderReceiptPDF(order, user);
           console.log(`📄 Generated PDF receipt for order status update ${order._id} (${newStatus})`);
