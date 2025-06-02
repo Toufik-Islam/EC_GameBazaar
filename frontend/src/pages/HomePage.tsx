@@ -14,7 +14,7 @@ import {
   InputLabel, 
   Select, 
   MenuItem, 
-  Slider, 
+  TextField, 
   Pagination,
   IconButton,
   useMediaQuery,
@@ -48,7 +48,7 @@ export default function HomePage() {
   
   const [games, setGames] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('newest');
-  const [priceRange, setPriceRange] = useState<number[]>([0, 100000]);
+  const [priceRange, setPriceRange] = useState<number[]>([0, 10000]);
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesPerPage] = useState(6);
   const [loading, setLoading] = useState(false);
@@ -261,9 +261,14 @@ export default function HomePage() {
     // Update URL without forcing a page reload
     navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
   };
-  
-  const handlePriceRangeChange = (event: Event, newValue: number | number[]) => {
-    setPriceRange(newValue as number[]);
+    const handleMinPriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newMinPrice = Number(event.target.value);
+    setPriceRange([newMinPrice, priceRange[1]]);
+  };
+
+  const handleMaxPriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newMaxPrice = Number(event.target.value);
+    setPriceRange([priceRange[0], newMaxPrice]);
   };
   
   const handleToggleWishlist = async (gameId: string) => {
@@ -322,13 +327,18 @@ export default function HomePage() {
           {error}
         </Alert>
       )}
-      
-      {/* Page Title with Refresh Option */}
+        {/* Page Title with Refresh Option */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" component="h1">
           {categoryFilter 
             ? `${categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)} Games` 
-            : (searchQuery ? `Search Results for "${searchQuery}"` : 'Newest Games')}
+            : (searchQuery ? `Search Results for "${searchQuery}"` : 
+              sortBy === 'featured' ? 'Featured Games' :
+              sortBy === 'price-low' ? 'Games: Price Low to High' :
+              sortBy === 'price-high' ? 'Games: Price High to Low' :
+              sortBy === 'rating' ? 'Highest Rated Games' :
+              sortBy === 'popularity' ? 'Popular Games' :
+              'Newest Games')}
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -365,20 +375,27 @@ export default function HomePage() {
             <MenuItem value="popularity">Popularity</MenuItem>
           </Select>
         </FormControl>
-        
-        <Box sx={{ width: 300, ml: isMobile ? 0 : 2 }}>
-          <Typography id="price-range-slider" gutterBottom>
-            Price Range: ৳{priceRange[0]} - ৳{priceRange[1]}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: isMobile ? 0 : 2 }}>
+          <TextField
+            label="Min Price (৳)"
+            type="number"
+            size="small"
+            value={priceRange[0]}
+            onChange={handleMinPriceChange}
+            inputProps={{ min: 0, step: 100 }}
+            sx={{ width: 140 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            to
           </Typography>
-          <Slider
-            value={priceRange}
-            onChange={handlePriceRangeChange}
-            valueLabelDisplay="auto"
-            min={0}
-            max={100}
-            step={10}
-            marks
-            aria-labelledby="price-range-slider"
+          <TextField
+            label="Max Price (৳)"
+            type="number"
+            size="small"
+            value={priceRange[1]}
+            onChange={handleMaxPriceChange}
+            inputProps={{ min: 0, step: 100 }}
+            sx={{ width: 140 }}
           />
         </Box>
       </Box>
