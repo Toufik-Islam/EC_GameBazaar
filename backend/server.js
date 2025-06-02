@@ -20,6 +20,7 @@ const wishlistRoutes = require('./routes/wishlist');
 const ordersRoutes = require('./routes/orders');
 const reviewsRoutes = require('./routes/reviews');
 const supportRoutes = require('./routes/support');
+const blogsRoutes = require('./routes/blogs');
 
 // Initialize express app
 const app = express();
@@ -60,6 +61,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/blogs', blogsRoutes);
 
 // Set static folder and serve frontend in production
 if (process.env.NODE_ENV === 'production') {

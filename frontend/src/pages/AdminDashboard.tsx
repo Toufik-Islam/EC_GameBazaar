@@ -82,15 +82,44 @@ interface Order {
   approvedAt?: string;
 }
 
+interface Blog {
+  _id: string;
+  title: string;
+  description: string;
+  content: string;
+  blogType: string;
+  frontpageImage: string;
+  images: string[];
+  author: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  };
+  status: string;
+  tags: string[];
+  views: number;
+  likes: string[];
+  comments: any[];
+  featured: boolean;
+  readTime: number;
+  slug: string;
+  relatedGames?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function AdminDashboard() {
   const [tabValue, setTabValue] = useState(0);
   const [openAddGame, setOpenAddGame] = useState(false);
   const [openEditGame, setOpenEditGame] = useState(false);
+  const [openAddBlog, setOpenAddBlog] = useState(false);
+  const [openEditBlog, setOpenEditBlog] = useState(false);
   const { isAdmin, token, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);  // State for real order data
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);// State for real order data
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -98,14 +127,15 @@ export default function AdminDashboard() {
   
   // Search states for orders
   const [pendingSearchTerm, setPendingSearchTerm] = useState('');
-  const [completedSearchTerm, setCompletedSearchTerm] = useState('');
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const [completedSearchTerm, setCompletedSearchTerm] = useState('');  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Load appropriate data when tab changes
     if (newValue === 1) {
       fetchPendingOrders();
     } else if (newValue === 2) {
       fetchCompletedOrders();
+    } else if (newValue === 3) {
+      fetchBlogs();
     }
   };
 
@@ -127,7 +157,6 @@ export default function AdminDashboard() {
       item.game && item.game.title.toLowerCase().includes(pendingSearchTerm.toLowerCase())
     )
   );
-
   const filteredCompletedOrders = completedOrders.filter(order => 
     order._id.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
     order.user.name.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
@@ -139,6 +168,7 @@ export default function AdminDashboard() {
   );
 
   const [games, setGames] = useState<Game[]>([]);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
   const [newGame, setNewGame] = useState({
     title: '',
     price: '',
@@ -154,9 +184,20 @@ export default function AdminDashboard() {
     thumbnail: '',
     systemRequirements: '',
     installationTutorial: '',
-    featured: false,
-    onSale: false,
+    featured: false,    onSale: false,
     discountPrice: ''
+  });  const [newBlog, setNewBlog] = useState({
+    title: '',
+    description: '',
+    content: '',
+    blogType: '',
+    frontpageImage: '',
+    images: [] as string[],
+    status: 'draft',
+    tags: [] as string[],
+    featured: false,
+    relatedGames: [] as string[],
+    readTime: 5
   });
   // Fetch pending orders
   const fetchPendingOrders = useCallback(async () => {
@@ -333,6 +374,25 @@ export default function AdminDashboard() {
         setGames(data.data);
       } else {
         setError('Failed to fetch games');
+      }    } catch (err) {
+      setError('Error connecting to server');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch blogs from the API
+  const fetchBlogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/blogs');
+      const data = await response.json();
+      
+      if (data.success) {
+        setBlogs(data.data);
+      } else {
+        setError('Failed to fetch blogs');
       }
     } catch (err) {
       setError('Error connecting to server');
@@ -354,6 +414,11 @@ export default function AdminDashboard() {
       unsubscribe();
     };
   }, [fetchGames]);
+
+  // Load blogs on component mount
+  useEffect(() => {
+    fetchBlogs();
+  }, [fetchBlogs]);
   // Load orders when component mounts and user is authenticated
   useEffect(() => {
     if (isAdmin() && token) {
@@ -362,7 +427,6 @@ export default function AdminDashboard() {
       fetchPendingOrders();
     }
   }, [token, fetchPendingOrders]); // Remove isAdmin from deps since it's a function
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isThumb: boolean) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -380,10 +444,55 @@ export default function AdminDashboard() {
       };
       reader.readAsDataURL(file);
     }
+  };  const handleBlogImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isFrontpage: boolean) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image file size must be less than 5MB');
+        return;
+      }
+      
+      // Check image count limit for additional images
+      if (!isFrontpage && newBlog.images.length >= 10) {
+        setError('Maximum 10 additional images allowed');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        if (isFrontpage) {
+          setNewBlog(prev => ({ ...prev, frontpageImage: base64 }));
+        } else {
+          setNewBlog(prev => ({ 
+            ...prev, 
+            images: [...prev.images, base64].slice(0, 10) 
+          }));
+        }
+      };
+      reader.onerror = () => {
+        setError('Failed to read image file');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRemoveImage = (index: number) => {
     setNewGame(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleRemoveBlogImage = (index: number) => {
+    setNewBlog(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
@@ -596,7 +705,6 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-
   const handleRemoveGame = async (gameId: string) => {
     try {
       setLoading(true);
@@ -626,16 +734,300 @@ export default function AdminDashboard() {
     }
   };
 
+  // Blog management functions
+  const handleAddBlog = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Adding blog with data:', newBlog);
+      console.log('User context:', { user, token: token ? 'present' : 'missing' });
+        // Enhanced validation with specific error messages
+      const validationErrors = [];
+      
+      if (!newBlog.title || newBlog.title.trim() === '') {
+        validationErrors.push('Title is required');
+      } else if (newBlog.title.length > 200) {
+        validationErrors.push('Title cannot exceed 200 characters');
+      }
+      
+      if (!newBlog.description || newBlog.description.trim() === '') {
+        validationErrors.push('Description is required');
+      } else if (newBlog.description.length > 500) {
+        validationErrors.push('Description cannot exceed 500 characters');
+      }
+      
+      if (!newBlog.content || newBlog.content.trim() === '') {
+        validationErrors.push('Content is required');
+      } else if (newBlog.content.length < 100) {
+        validationErrors.push('Content must be at least 100 characters long');
+      }
+      
+      if (!newBlog.blogType || newBlog.blogType.trim() === '') {
+        validationErrors.push('Blog type is required');
+      }
+      
+      if (!newBlog.frontpageImage || newBlog.frontpageImage.trim() === '') {
+        validationErrors.push('Frontpage image is required');
+      }
+      
+      // Validate image count
+      if (newBlog.images.length > 10) {
+        validationErrors.push('Maximum 10 additional images allowed');
+      }
+      
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join(', '));
+        setLoading(false);
+        return;
+      }
+      
+      // Format the data according to backend model requirements
+      const blogData = {
+        title: newBlog.title.trim(),
+        description: newBlog.description.trim(),
+        content: newBlog.content.trim(),
+        blogType: newBlog.blogType,
+        frontpageImage: newBlog.frontpageImage,
+        images: newBlog.images,
+        status: newBlog.status,
+        tags: newBlog.tags.filter(tag => tag.trim() !== ''),
+        featured: newBlog.featured,
+        relatedGames: newBlog.relatedGames.filter(game => game.trim() !== ''),
+        readTime: newBlog.readTime
+        // Note: author is set automatically by backend from the JWT token
+      };
+
+      console.log('Sending blog data:', blogData);
+
+      // Send data to the backend
+      const response = await fetch('/api/blogs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(blogData),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      
+      console.log('Blog creation response:', data);
+
+      if (data.success) {
+        // Add the new blog to the state
+        setBlogs(prevBlogs => [...prevBlogs, data.data]);
+        setSuccess('Blog created successfully!');
+          // Reset form
+        setNewBlog({
+          title: '',
+          description: '',
+          content: '',
+          blogType: '',
+          frontpageImage: '',
+          images: [],
+          status: 'draft',
+          tags: [],
+          featured: false,
+          relatedGames: [],
+          readTime: 5
+        });
+        setOpenAddBlog(false);      } else {
+        // Handle validation errors array from backend
+        if (data.errors && Array.isArray(data.errors)) {
+          // Display validation errors in a more readable format
+          const formattedErrors = data.errors.map(err => `• ${err}`).join('\n');
+          setError(`Validation Error:\n${formattedErrors}`);
+        } else {
+          setError(data.message || 'Failed to create blog');
+        }
+      }
+    } catch (err) {
+      console.error('Error creating blog:', err);
+      setError('Error connecting to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditBlog = (blog: Blog) => {
+    setSelectedBlog(blog);
+      // Format the blog data for the form
+    setNewBlog({
+      title: blog.title,
+      description: blog.description,
+      content: blog.content,
+      blogType: blog.blogType,
+      frontpageImage: blog.frontpageImage,
+      images: blog.images || [],
+      status: blog.status,
+      tags: blog.tags || [],
+      featured: blog.featured || false,
+      relatedGames: blog.relatedGames || [],
+      readTime: blog.readTime || 5
+    });
+    
+    setOpenEditBlog(true);
+  };
+  const handleUpdateBlog = async () => {
+    if (!selectedBlog) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+        // Client-side validation
+      const validationErrors = [];
+      
+      if (!newBlog.title) {
+        validationErrors.push('Title is required');
+      } else if (newBlog.title.length > 200) {
+        validationErrors.push('Title must be 200 characters or less');
+      }
+      
+      if (!newBlog.description) {
+        validationErrors.push('Description is required');
+      } else if (newBlog.description.length > 500) {
+        validationErrors.push('Description must be 500 characters or less');
+      }
+      
+      if (!newBlog.content) {
+        validationErrors.push('Content is required');
+      } else if (newBlog.content.length < 100) {
+        validationErrors.push('Content must be at least 100 characters');
+      }
+      
+      if (!newBlog.blogType) {
+        validationErrors.push('Blog type is required');
+      }
+      
+      if (!newBlog.frontpageImage) {
+        validationErrors.push('Frontpage image is required');
+      }
+      
+      // Validate image count
+      if (newBlog.images.length > 10) {
+        validationErrors.push('Maximum 10 additional images allowed');
+      }
+      
+      if (validationErrors.length > 0) {
+        setError(`Validation Error: ${validationErrors.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+        // Format the data according to backend model requirements
+      const blogData = {
+        title: newBlog.title,
+        description: newBlog.description,
+        content: newBlog.content,
+        blogType: newBlog.blogType,
+        frontpageImage: newBlog.frontpageImage,
+        images: newBlog.images,
+        status: newBlog.status,
+        tags: newBlog.tags,
+        featured: newBlog.featured,
+        relatedGames: newBlog.relatedGames,
+        readTime: newBlog.readTime
+      };
+
+      // Send data to the backend
+      const response = await fetch(`/api/blogs/${selectedBlog._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(blogData),
+        credentials: 'include'
+      });
+
+      const data = await response.json();      if (data.success) {
+        // Update the blog in the state
+        setBlogs(prevBlogs => 
+          prevBlogs.map(blog => 
+            blog._id === selectedBlog._id ? data.data : blog
+          )
+        );
+        setSuccess('Blog updated successfully!');
+          // Reset form and close modal
+        setNewBlog({
+          title: '',
+          description: '',
+          content: '',
+          blogType: '',
+          frontpageImage: '',
+          images: [],
+          status: 'draft',
+          tags: [],
+          featured: false,
+          relatedGames: [],
+          readTime: 5
+        });
+        setSelectedBlog(null);
+        setOpenEditBlog(false);      } else {
+        // Handle validation errors array from backend
+        if (data.errors && Array.isArray(data.errors)) {
+          // Display validation errors in a more readable format
+          const formattedErrors = data.errors.map(err => `• ${err}`).join('\n');
+          setError(`Validation Error:\n${formattedErrors}`);
+        } else {
+          setError(data.message || 'Failed to update blog');
+        }
+      }
+    } catch (err) {
+      console.error('Error updating blog:', err);
+      setError('Error connecting to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveBlog = async (blogId: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`/api/blogs/${blogId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the blog from the state
+        setBlogs(prevBlogs => prevBlogs.filter(blog => blog._id !== blogId));
+        setSuccess('Blog removed successfully!');
+      } else {
+        setError(data.message || 'Failed to remove blog');
+      }
+    } catch (err) {
+      setError('Error connecting to server');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Available genres and platforms from the backend model
   const availableGenres = [
     'Action', 'Adventure', 'RPG', 'Strategy', 'Simulation', 
     'Sports', 'Racing', 'Puzzle', 'FPS', 'Fighting', 
     'Platformer', 'Survival', 'Horror', 'Stealth', 'Open World'
   ];
-
   const availablePlatforms = ['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Mobile'];
   
   const availableRatings = ['E', 'E10+', 'T', 'M', 'A'];
+
+  // Available blog types from the backend model
+  const availableBlogTypes = [
+    'Game News', 'Gaming Tips', 'Installation Troubleshooting', 
+    'Game Reviews', 'Industry Updates', 'Hardware & Tech', 
+    'Game Guides', 'Gaming Culture'
+  ];
+
+  const availableBlogStatuses = ['draft', 'published', 'archived'];
 
   if (!isAdmin()) {
     return <Typography>Access Denied</Typography>;
@@ -657,12 +1049,12 @@ export default function AdminDashboard() {
           {success}
         </Alert>
       </Snackbar>
-      
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Game Management" />
           <Tab label="Pending Orders" />
           <Tab label="Processed Orders" />
+          <Tab label="Blog Management" />
         </Tabs>
       </Box>
 
@@ -1399,8 +1791,360 @@ export default function AdminDashboard() {
                   </ListItem>
                 </Paper>
               ))}
-            </List>
-          )}
+            </List>          )}
+        </Box>
+      )}
+
+      {tabValue === 3 && (
+        <Box>
+          <Button 
+            variant="contained" 
+            onClick={() => setOpenAddBlog(true)}
+            sx={{ mb: 3 }}
+          >
+            Add New Blog
+          </Button>
+
+          {loading && <CircularProgress />}
+
+          <Grid container spacing={2}>
+            {blogs.map((blog) => (
+              <Grid item xs={12} key={blog._id}>
+                <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="h6">{blog.title}</Typography>
+                    <Typography color="text.secondary">{blog.blogType}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Status: {blog.status} | Views: {blog.views} | Likes: {blog.likes.length}
+                    </Typography>
+                    {blog.tags && blog.tags.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                        {blog.tags.map(tag => (
+                          <Chip key={tag} label={tag} size="small" />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={() => handleEditBlog(blog)}
+                      startIcon={<Edit />}
+                    >
+                      Edit Blog
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => handleRemoveBlog(blog._id)}
+                      startIcon={<Delete />}
+                    >
+                      Remove Blog
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>            {/* Add Blog Dialog */}
+          <Dialog open={openAddBlog} onClose={() => setOpenAddBlog(false)} maxWidth="md" fullWidth>
+            <DialogTitle>Add New Blog</DialogTitle>
+            <DialogContent>
+              <TextField
+                margin="dense"
+                label="Title"
+                fullWidth
+                variant="outlined"
+                value={newBlog.title}
+                onChange={(e) => setNewBlog({...newBlog, title: e.target.value})}
+                helperText={`${newBlog.title.length}/200 characters`}
+                error={newBlog.title.length > 200}
+              />
+              <TextField
+                margin="dense"
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={newBlog.description}
+                onChange={(e) => setNewBlog({...newBlog, description: e.target.value})}
+                helperText={`${newBlog.description.length}/500 characters`}
+                error={newBlog.description.length > 500}
+              />
+              <TextField
+                margin="dense"
+                label="Content"
+                fullWidth
+                multiline
+                rows={8}
+                variant="outlined"
+                value={newBlog.content}
+                onChange={(e) => setNewBlog({...newBlog, content: e.target.value})}
+                helperText={`${newBlog.content.length} characters (minimum 100 required)`}
+                error={newBlog.content.length > 0 && newBlog.content.length < 100}
+              />
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Blog Type</InputLabel>
+                <Select
+                  value={newBlog.blogType}
+                  onChange={(e) => setNewBlog({...newBlog, blogType: e.target.value})}
+                >
+                  {availableBlogTypes.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={newBlog.status}
+                  onChange={(e) => setNewBlog({...newBlog, status: e.target.value})}
+                >
+                  {availableBlogStatuses.map((status) => (
+                    <MenuItem key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>Frontpage Image (Required)</Typography>
+                <input
+                  accept="image/*"
+                  type="file"
+                  onChange={(e) => handleBlogImageUpload(e, true)}
+                />
+                {newBlog.frontpageImage && (
+                  <Box sx={{ mt: 1 }}>
+                    <img src={newBlog.frontpageImage} alt="Frontpage" style={{ height: 100 }} />
+                  </Box>
+                )}
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Additional Images (Up to 10)
+                </Typography>
+                <input
+                  accept="image/*"
+                  type="file"
+                  onChange={(e) => handleBlogImageUpload(e, false)}
+                  disabled={newBlog.images.length >= 10}
+                />
+                <Grid container spacing={1} sx={{ mt: 1 }}>
+                  {newBlog.images.map((img, index) => (
+                    <Grid item key={index}>
+                      <Box sx={{ position: 'relative' }}>
+                        <img src={img} alt={`Blog ${index + 1}`} style={{ height: 100 }} />
+                        <IconButton
+                          size="small"
+                          sx={{ position: 'absolute', top: 0, right: 0 }}
+                          onClick={() => handleRemoveBlogImage(index)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+              
+              <TextField
+                margin="dense"
+                label="Tags (comma-separated)"
+                fullWidth
+                variant="outlined"
+                value={newBlog.tags.join(', ')}
+                onChange={(e) => setNewBlog({...newBlog, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)})}
+              />
+              
+              <TextField
+                margin="dense"
+                label="Read Time (minutes)"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newBlog.readTime}
+                onChange={(e) => setNewBlog({...newBlog, readTime: parseInt(e.target.value) || 5})}
+              />
+              
+              <FormControl component="fieldset" sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox
+                    checked={newBlog.featured}
+                    onChange={(e) => setNewBlog({...newBlog, featured: e.target.checked})}
+                    name="featured"
+                  />
+                  <Typography>Featured Blog</Typography>
+                </Box>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenAddBlog(false)}>Cancel</Button>
+              <Button 
+                onClick={handleAddBlog} 
+                variant="contained" 
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : 'Add Blog'}
+              </Button>
+            </DialogActions>
+          </Dialog>            {/* Edit Blog Dialog */}
+          <Dialog open={openEditBlog} onClose={() => setOpenEditBlog(false)} maxWidth="md" fullWidth>
+            <DialogTitle>Edit Blog</DialogTitle>
+            <DialogContent>
+              <TextField
+                margin="dense"
+                label="Title"
+                fullWidth
+                variant="outlined"
+                value={newBlog.title}
+                onChange={(e) => setNewBlog({...newBlog, title: e.target.value})}
+                helperText={`${newBlog.title.length}/200 characters`}
+                error={newBlog.title.length > 200}
+              />
+              <TextField
+                margin="dense"
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={newBlog.description}
+                onChange={(e) => setNewBlog({...newBlog, description: e.target.value})}
+                helperText={`${newBlog.description.length}/500 characters`}
+                error={newBlog.description.length > 500}
+              />
+              <TextField
+                margin="dense"
+                label="Content"
+                fullWidth
+                multiline
+                rows={8}
+                variant="outlined"
+                value={newBlog.content}
+                onChange={(e) => setNewBlog({...newBlog, content: e.target.value})}
+                helperText={`${newBlog.content.length} characters (minimum 100 required)`}
+                error={newBlog.content.length > 0 && newBlog.content.length < 100}
+              />
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Blog Type</InputLabel>
+                <Select
+                  value={newBlog.blogType}
+                  onChange={(e) => setNewBlog({...newBlog, blogType: e.target.value})}
+                >
+                  {availableBlogTypes.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={newBlog.status}
+                  onChange={(e) => setNewBlog({...newBlog, status: e.target.value})}
+                >
+                  {availableBlogStatuses.map((status) => (
+                    <MenuItem key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>Frontpage Image (Required)</Typography>
+                <input
+                  accept="image/*"
+                  type="file"
+                  onChange={(e) => handleBlogImageUpload(e, true)}
+                />
+                {newBlog.frontpageImage && (
+                  <Box sx={{ mt: 1 }}>
+                    <img src={newBlog.frontpageImage} alt="Frontpage" style={{ height: 100 }} />
+                  </Box>
+                )}
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Additional Images (Up to 10)
+                </Typography>
+                <input
+                  accept="image/*"
+                  type="file"
+                  onChange={(e) => handleBlogImageUpload(e, false)}
+                  disabled={newBlog.images.length >= 10}
+                />
+                <Grid container spacing={1} sx={{ mt: 1 }}>
+                  {newBlog.images.map((img, index) => (
+                    <Grid item key={index}>
+                      <Box sx={{ position: 'relative' }}>
+                        <img src={img} alt={`Blog ${index + 1}`} style={{ height: 100 }} />
+                        <IconButton
+                          size="small"
+                          sx={{ position: 'absolute', top: 0, right: 0 }}
+                          onClick={() => handleRemoveBlogImage(index)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+              
+              <TextField
+                margin="dense"
+                label="Tags (comma-separated)"
+                fullWidth
+                variant="outlined"
+                value={newBlog.tags.join(', ')}
+                onChange={(e) => setNewBlog({...newBlog, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)})}
+              />
+              
+              <TextField
+                margin="dense"
+                label="Read Time (minutes)"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newBlog.readTime}
+                onChange={(e) => setNewBlog({...newBlog, readTime: parseInt(e.target.value) || 5})}
+              />
+              
+              <FormControl component="fieldset" sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox
+                    checked={newBlog.featured}
+                    onChange={(e) => setNewBlog({...newBlog, featured: e.target.checked})}
+                    name="featured"
+                  />
+                  <Typography>Featured Blog</Typography>
+                </Box>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenEditBlog(false)}>Cancel</Button>
+              <Button 
+                onClick={handleUpdateBlog} 
+                variant="contained" 
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : 'Update Blog'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       )}
     </Container>

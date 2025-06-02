@@ -22,6 +22,8 @@ import ReturnsRefundsPage from './pages/ReturnsRefundsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import SupportPage from './pages/SupportPage';
 import HelpCenterPage from './pages/HelpCenterPage';
+import BlogPage from './pages/BlogPage';
+import BlogDetailsPage from './pages/BlogDetailsPage';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -86,9 +88,11 @@ export default function App() {
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="/faq" element={<FAQPage />} />
                     <Route path="/shipping" element={<ShippingInfoPage />} />
-                    <Route path="/returns" element={<ReturnsRefundsPage />} />
-                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                    <Route path="/support" element={<SupportPage />} />                    <Route path="/help-center" element={<HelpCenterPage />} />
+                    <Route path="/returns" element={<ReturnsRefundsPage />} />                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                    <Route path="/support" element={<SupportPage />} />
+                    <Route path="/help-center" element={<HelpCenterPage />} />
+                    <Route path="/blog" element={<BlogPage />} />
+                    <Route path="/blog/:id" element={<BlogDetailsPage />} />
                   </Routes>
                   </ErrorBoundary>
                 </main>

@@ -15,6 +15,8 @@ import PrivacyPolicyPage from './PrivacyPolicyPage';
 import SupportPage from './SupportPage';
 import HelpCenterPage from './HelpCenterPage';
 import AdminDashboard from './AdminDashboard';
+import BlogPage from './BlogPage';
+import BlogDetailsPage from './BlogDetailsPage';
 
 export {
   HomePage,
@@ -32,5 +34,7 @@ export {
   PrivacyPolicyPage,
   SupportPage,
   HelpCenterPage,
-  AdminDashboard
+  AdminDashboard,
+  BlogPage,
+  BlogDetailsPage
 };

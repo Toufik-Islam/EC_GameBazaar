@@ -217,11 +217,14 @@ export default function Header() {
   ];
 
   const drawer = (
-    <Box sx={{ width: 250 }} role="presentation">
-      <List>
+    <Box sx={{ width: 250 }} role="presentation">      <List>
         <ListItem component={Link} to="/">
           <ListItemIcon><Home /></ListItemIcon>
           <ListItemText primary="Home" />
+        </ListItem>
+        <ListItem component={Link} to="/blog">
+          <ListItemIcon><SportsEsports /></ListItemIcon>
+          <ListItemText primary="Blog" />
         </ListItem>
         <ListItem onClick={() => setDrawerOpen(false)}>
           <ListItemIcon><Category /></ListItemIcon>
@@ -396,9 +399,7 @@ export default function Header() {
                 </SuggestionsDropdown>
               </ClickAwayListener>
             )}
-          </Box>
-
-          <FormControl sx={{ minWidth: 120, mr: 2, display: { xs: 'none', md: 'block' } }}>
+          </Box>          <FormControl sx={{ minWidth: 120, mr: 2, display: { xs: 'none', md: 'block' } }}>
             <Select
               value=""
               displayEmpty
@@ -411,6 +412,15 @@ export default function Header() {
               ))}
             </Select>
           </FormControl>
+
+          <Button 
+            color="inherit" 
+            component={Link} 
+            to="/blog"
+            sx={{ mr: 2, display: { xs: 'none', md: 'block' } }}
+          >
+            Blog
+          </Button>
 
           <Box sx={{ display: 'flex' }}>
             <IconButton color="inherit" component={Link} to="/cart">
