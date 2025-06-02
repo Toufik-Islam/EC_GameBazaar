@@ -23,8 +23,7 @@ const OrderSchema = new mongoose.Schema({
         required: true
       }
     }
-  ],
-  shippingAddress: {
+  ],  shippingAddress: {
     street: {
       type: String,
       required: true
@@ -44,6 +43,11 @@ const OrderSchema = new mongoose.Schema({
     country: {
       type: String,
       required: true
+    },
+    mobile: {
+      type: String,
+      required: [true, 'Mobile number is required for delivery'],
+      match: [/^[0-9]{10,15}$/, 'Please provide a valid mobile number']
     }
   },
   paymentMethod: {

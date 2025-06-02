@@ -56,6 +56,16 @@ export default function CartPage() {
   const [paymentSuccessDialog, setPaymentSuccessDialog] = useState(false);
   // Add state for the order ID
   const [orderId, setOrderId] = useState('');
+  
+  // Add state for shipping address
+  const [shippingAddress, setShippingAddress] = useState({
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Bangladesh',
+    mobile: ''
+  });
 
   // Generate a random order ID
   const generateOrderId = () => {
@@ -79,7 +89,6 @@ export default function CartPage() {
         return 'creditCard';
     }
   };
-
   const handlePayment = async () => {
     // Check if card number has been entered
     if (!cardNumber.trim()) {
@@ -90,19 +99,31 @@ export default function CartPage() {
       return;
     }
 
+    // Validate shipping address fields
+    if (!shippingAddress.street.trim() || !shippingAddress.city.trim() || 
+        !shippingAddress.state.trim() || !shippingAddress.zipCode.trim() || 
+        !shippingAddress.mobile.trim()) {
+      setNotification({
+        type: 'error',
+        message: 'Please fill in all shipping address fields including mobile number'
+      });
+      return;
+    }
+
+    // Validate mobile number format (basic validation)
+    const mobileRegex = /^[0-9]{10,15}$/;
+    if (!mobileRegex.test(shippingAddress.mobile)) {
+      setNotification({
+        type: 'error',
+        message: 'Please enter a valid mobile number (10-15 digits)'
+      });
+      return;
+    }
+
     setProcessing(true);
     
     try {
-      // Create shipping address from user data (in a real app, you would collect this from the user)
-      const shippingAddress = {
-        street: '123 Game Street',
-        city: 'Gameville',
-        state: 'GA',
-        zipCode: '12345',
-        country: 'GameLand'
-      };
-
-      // Create the order data
+      // Create the order data with actual shipping address
       const orderData = {
         shippingAddress,
         paymentMethod: convertPaymentMethodForBackend(paymentMethod),
@@ -244,41 +265,50 @@ export default function CartPage() {
         doc.setFontSize(10);
         doc.text(`Date: ${formattedDate} ${formattedTime}`, 20, 55);
         doc.text(`Order ID: ${orderId}`, 20, 60);
-        
-        // Customer information section
+          // Customer information section
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Customer Information', 20, 70);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.text(`Name: ${user?.username || 'Guest User'}`, 20, 75);
-        doc.text(`Email: ${user?.id ? (typeof user.id === 'string' ? user.id : 'customer@gamebazaar.com') : 'customer@gamebazaar.com'}`, 20, 80);
+        doc.text(`Email: ${user?.email || 'customer@gamebazaar.com'}`, 20, 80);
+        
+        // Add shipping address information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Shipping Address', 20, 90);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`${shippingAddress.street}`, 20, 95);
+        doc.text(`${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zipCode}`, 20, 100);
+        doc.text(`${shippingAddress.country}`, 20, 105);
+        doc.text(`Mobile: ${shippingAddress.mobile}`, 20, 110);
         
         // Add payment information
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Payment Details', 20, 90);
+        doc.text('Payment Details', 20, 125);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 95);
-        
+        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 130);        
         // Display the appropriate identifier based on payment method
         if (paymentMethod === 'card') {
           // Mask the card number for security
           const maskedNumber = 'xxxx-xxxx-xxxx-' + (cardNumber.slice(-4) || '0000');
-          doc.text(`Card Number: ${maskedNumber}`, 20, 100);
+          doc.text(`Card Number: ${maskedNumber}`, 20, 135);
         } else if (paymentMethod === 'paypal') {
-          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 100);
+          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 135);
         } else if (paymentMethod === 'bkash' || paymentMethod === 'nagad') {
-          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 100);
+          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 135);
         }
         
-        doc.text(`Payment Date: ${formattedDate}`, 20, 105);
+        doc.text(`Payment Date: ${formattedDate}`, 20, 140);
         
         // Order summary section title
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Order Summary', 20, 115);
+        doc.text('Order Summary', 20, 150);
         doc.setFont('helvetica', 'normal');
         
         // Create a table body with cart items
@@ -300,12 +330,11 @@ export default function CartPage() {
         } else {
           tableBody = [["No items in cart", "", "", ""]]; // Fallback if cart is empty
         }
-        
-        // Use autoTable directly - using the imported function
+          // Use autoTable directly - using the imported function
         autoTable(doc, {
           head: [["Item", "Quantity", "Unit Price", "Total"]],
           body: tableBody,
-          startY: 120,
+          startY: 155,
           theme: 'grid',
           styles: { fontSize: 9 },
           headStyles: { fillColor: [41, 128, 185], textColor: 255 },
@@ -419,41 +448,50 @@ export default function CartPage() {
         doc.setFontSize(10);
         doc.text(`Date: ${formattedDate} ${formattedTime}`, 20, 45);
         doc.text(`Order ID: ${orderId}`, 20, 50);
-        
-        // Customer information section
+          // Customer information section
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Customer Information', 20, 60);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.text(`Name: ${user?.username || 'Guest User'}`, 20, 65);
-        doc.text(`Email: ${user?.id ? (typeof user.id === 'string' ? user.id : 'customer@gamebazaar.com') : 'customer@gamebazaar.com'}`, 20, 70);
+        doc.text(`Email: ${user?.email || 'customer@gamebazaar.com'}`, 20, 70);
+        
+        // Add shipping address information
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Shipping Address', 20, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`${shippingAddress.street}`, 20, 85);
+        doc.text(`${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zipCode}`, 20, 90);
+        doc.text(`${shippingAddress.country}`, 20, 95);
+        doc.text(`Mobile: ${shippingAddress.mobile}`, 20, 100);
         
         // Add payment information
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Payment Details', 20, 80);
+        doc.text('Payment Details', 20, 110);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 85);
-        
+        doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 115);        
         // Display the appropriate identifier based on payment method
         if (paymentMethod === 'card') {
           // Mask the card number for security
           const maskedNumber = 'xxxx-xxxx-xxxx-' + (cardNumber.slice(-4) || '0000');
-          doc.text(`Card Number: ${maskedNumber}`, 20, 90);
+          doc.text(`Card Number: ${maskedNumber}`, 20, 120);
         } else if (paymentMethod === 'paypal') {
-          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 90);
+          doc.text(`PayPal: ${cardNumber || 'N/A'}`, 20, 120);
         } else if (paymentMethod === 'bkash' || paymentMethod === 'nagad') {
-          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 90);
+          doc.text(`${paymentMethod.toUpperCase()} Number: ${cardNumber || 'N/A'}`, 20, 120);
         }
         
-        doc.text(`Payment Date: ${formattedDate}`, 20, 95);
+        doc.text(`Payment Date: ${formattedDate}`, 20, 125);
         
         // Order summary section title
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Order Summary', 20, 105);
+        doc.text('Order Summary', 20, 135);
         doc.setFont('helvetica', 'normal');
         
         // Create a table body with cart items
@@ -475,12 +513,11 @@ export default function CartPage() {
         } else {
           tableBody = [["No items in cart", "", "", ""]]; // Fallback if cart is empty
         }
-        
-        // Use autoTable directly - using the imported function
+          // Use autoTable directly - using the imported function
         autoTable(doc, {
           head: [["Item", "Quantity", "Unit Price", "Total"]],
           body: tableBody,
-          startY: 110,
+          startY: 140,
           theme: 'grid',
           styles: { fontSize: 9 },
           headStyles: { fillColor: [41, 128, 185], textColor: 255 },
@@ -494,7 +531,7 @@ export default function CartPage() {
         });
         
         // Calculate final Y position
-        let finalY = 150; // Default position if we can't get lastAutoTable
+        let finalY = 180; // Default position if we can't get lastAutoTable
         if (doc.lastAutoTable) {
           finalY = doc.lastAutoTable.finalY + 10;
         }
@@ -679,13 +716,93 @@ export default function CartPage() {
         <Alert onClose={closeNotification} severity={notification?.type || 'info'}>
           {notification?.message || ''}
         </Alert>
-      </Snackbar>
-
-      <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
+      </Snackbar>      <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
         Shopping Cart
       </Typography>
 
       <Box sx={{ mt: 4 }}>
+        {/* Shipping Address Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Shipping Address
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email Address"
+                value={user?.email || ''}
+                disabled
+                helperText="Email from your registered account"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Street Address *"
+                value={shippingAddress.street}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, street: e.target.value }))}
+                placeholder="Enter your full street address"
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="City *"
+                value={shippingAddress.city}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
+                placeholder="Enter your city"
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="State/Division *"
+                value={shippingAddress.state}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
+                placeholder="Enter your state or division"
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ZIP/Postal Code *"
+                value={shippingAddress.zipCode}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
+                placeholder="Enter your postal code"
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Country"
+                value={shippingAddress.country}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
+                placeholder="Enter your country"
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Mobile Number *"
+                value={shippingAddress.mobile}
+                onChange={(e) => setShippingAddress(prev => ({ ...prev, mobile: e.target.value }))}
+                placeholder="Enter your mobile number for delivery contact"
+                type="tel"
+                required
+                helperText="Required for delivery contact (10-15 digits)"
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+
         <Typography variant="h6">Payment Method</Typography>
         <RadioGroup value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
           <FormControlLabel value="card" control={<Radio />} label="Credit/Debit Card" />
@@ -922,9 +1039,7 @@ export default function CartPage() {
                   <ListItemText primary="Total" />
                   <Typography variant="h6">৳{total.toFixed(2)}</Typography>
                 </ListItem>
-              </List>
-
-              <Button
+              </List>              <Button
                 variant="contained"
                 fullWidth
                 size="large"
@@ -932,7 +1047,7 @@ export default function CartPage() {
                 onClick={handlePayment}
                 disabled={processing}
               >
-                {processing ? 'Processing...' : 'Proceed to Checkout'}
+                {processing ? 'Processing...' : 'Complete Order'}
               </Button>
 
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>

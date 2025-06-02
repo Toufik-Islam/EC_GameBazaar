@@ -223,12 +223,18 @@ class PDFGenerator {
           <div class="section">
             <div class="info-row"><strong>Date:</strong> ${formattedDate} ${formattedTime}</div>
             <div class="info-row"><strong>Order ID:</strong> ${displayOrderId}</div>
-          </div>
-
-          <div class="section">
+          </div>          <div class="section">
             <div class="section-title">Customer Information</div>
             <div class="info-row"><strong>Name:</strong> ${user.name || user.username || 'Guest User'}</div>
             <div class="info-row"><strong>Email:</strong> ${user.email || 'customer@gamebazaar.com'}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Shipping Address</div>
+            <div class="info-row"><strong>Street:</strong> ${order.shippingAddress.street}</div>
+            <div class="info-row"><strong>City:</strong> ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}</div>
+            <div class="info-row"><strong>Country:</strong> ${order.shippingAddress.country}</div>
+            ${order.shippingAddress.mobile ? `<div class="info-row"><strong>Mobile:</strong> ${order.shippingAddress.mobile}</div>` : ''}
           </div>
 
           <div class="section">
