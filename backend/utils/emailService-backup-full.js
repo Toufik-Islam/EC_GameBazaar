@@ -1,9 +1,6 @@
-// Enhanced EmailService with better error handling
+// Backup of current EmailService before recreation
 const nodemailer = require('nodemailer');
 const pdfGenerator = require('./pdfGenerator');
-
-// Ensure environment variables are loaded
-require('dotenv').config();
 
 class EmailService {
   constructor() {
@@ -14,10 +11,6 @@ class EmailService {
 
   initializeTransporter() {
     try {
-      console.log('Initializing email transporter...');
-      console.log('Email user:', process.env.EMAIL_USERNAME);
-      console.log('Email pass:', process.env.EMAIL_PASSWORD ? '***SET***' : 'NOT SET');
-      
       this.transporter = nodemailer.createTransport({
         service: 'gmail',
         host: 'smtp.gmail.com',

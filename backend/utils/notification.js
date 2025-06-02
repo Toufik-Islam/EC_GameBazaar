@@ -70,7 +70,7 @@ exports.sendNotification = async (options) => {
 };
 
 /**
- * Send order status notification to a user using email templates
+ * Send order status notification to a user using email templates with PDF attachment
  * @param {Object} order - Order object with populated user field
  * @param {String} status - New status of the order
  * @returns {Promise<Object>} - Result of the notification attempt
@@ -82,8 +82,8 @@ exports.sendOrderStatusNotification = async (order, status) => {
       throw new Error('User data must be populated in the order object');
     }
     
-    // Use the email service's template-based status update
-    return await emailService.sendOrderStatusUpdateEmail(order, order.user, status);
+    // Use the email service's template-based status update with PDF
+    return await emailService.sendOrderStatusUpdateEmailWithPDF(order, order.user, status);
   } catch (error) {
     console.error('Error sending order status notification:', error);
     return {
@@ -113,7 +113,7 @@ exports.sendWelcomeNotification = async (user) => {
 };
 
 /**
- * Send order confirmation email to users
+ * Send order confirmation email to users with PDF attachment
  * @param {Object} order - Order object with populated user field
  * @returns {Promise<Object>} - Result of the notification attempt
  */
@@ -124,7 +124,7 @@ exports.sendOrderConfirmationNotification = async (order) => {
       throw new Error('User data must be populated in the order object');
     }
     
-    return await emailService.sendOrderConfirmationEmail(order, order.user);
+    return await emailService.sendOrderConfirmationEmailWithPDF(order, order.user);
   } catch (error) {
     console.error('Error sending order confirmation notification:', error);
     return {
