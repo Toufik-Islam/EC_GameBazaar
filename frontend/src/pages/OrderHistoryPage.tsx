@@ -42,7 +42,7 @@ interface OrderItem {
     images: string[];
     price: number;
     discountPrice?: number;
-  };
+  } | null;
   quantity: number;
   price: number;
 }
@@ -78,7 +78,6 @@ export default function OrderHistoryPage() {
   const [error, setError] = useState<string | null>(null);
   
   const { user, token } = useAuth();
-
   // Fetch user's orders from the backend
   useEffect(() => {
     const fetchOrders = async () => {
@@ -106,6 +105,20 @@ export default function OrderHistoryPage() {
 
         if (data.success) {
           console.log('Fetched orders:', data.data);
+          
+          // Count orders with null games for user awareness
+          let ordersWithNullGames = 0;
+          data.data.forEach(order => {
+            const nullGamesCount = order.orderItems.filter(item => !item.game).length;
+            if (nullGamesCount > 0) {
+              ordersWithNullGames++;
+            }
+          });
+          
+          if (ordersWithNullGames > 0) {
+            console.warn(`Warning: ${ordersWithNullGames} of your orders contain games that are no longer available`);
+          }
+          
           setOrders(data.data);
         } else {
           setError(data.message || 'Something went wrong');
@@ -128,11 +141,12 @@ export default function OrderHistoryPage() {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
-
   // Filter orders based on search term
   const filteredOrders = orders.filter(order => 
     order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.orderItems.some(item => item.game.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    order.orderItems.some(item => 
+      item.game && item.game.title.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const getStatusColor = (status: string) => {
@@ -158,7 +172,6 @@ export default function OrderHistoryPage() {
       day: 'numeric'
     });
   };
-
   // Format payment method for display
   const formatPaymentMethod = (method: string, result?: any) => {
     switch (method) {
@@ -173,6 +186,16 @@ export default function OrderHistoryPage() {
       default:
         return method;
     }
+  };
+
+  // Get safe item count (excluding null games if needed)
+  const getSafeItemCount = (orderItems: OrderItem[]) => {
+    return orderItems.length;
+  };
+
+  // Get available games count
+  const getAvailableGamesCount = (orderItems: OrderItem[]) => {
+    return orderItems.filter(item => item.game !== null).length;
   };
 
   return (
@@ -241,13 +264,17 @@ export default function OrderHistoryPage() {
                     color={getStatusColor(order.status) as "success" | "info" | "warning" | "error" | "default"} 
                     size="small" 
                   />
-                </Grid>
-                <Grid item xs={6} sm={3}>
+                </Grid>                <Grid item xs={6} sm={3}>
                   <Typography variant="subtitle1">
                     ৳{order.totalPrice.toFixed(2)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
+                    {getSafeItemCount(order.orderItems)} {getSafeItemCount(order.orderItems) === 1 ? 'item' : 'items'}
+                    {getAvailableGamesCount(order.orderItems) !== getSafeItemCount(order.orderItems) && (
+                      <span style={{ color: '#f44336' }}>
+                        {' '}({getAvailableGamesCount(order.orderItems)} available)
+                      </span>
+                    )}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={3} sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -312,10 +339,18 @@ export default function OrderHistoryPage() {
                     </Grid>
                   )}
                 </Grid>
-                
-                <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom>
                   Items
                 </Typography>
+                
+                {getAvailableGamesCount(order.orderItems) !== getSafeItemCount(order.orderItems) && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      This order contains {getSafeItemCount(order.orderItems) - getAvailableGamesCount(order.orderItems)} game(s) 
+                      that are no longer available in our store. You may not be able to download these games.
+                    </Typography>
+                  </Alert>
+                )}
                 
                 <TableContainer>
                   <Table sx={{ minWidth: 650 }}>
@@ -326,36 +361,62 @@ export default function OrderHistoryPage() {
                         <TableCell>Price</TableCell>
                         <TableCell align="right">Actions</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
+                    </TableHead>                    <TableBody>
                       {order.orderItems.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Box
                                 component="img"
-                                src={item.game.images[0] || 'https://via.placeholder.com/40x40?text=Game'}
-                                alt={item.game.title}
+                                src={item.game?.images?.[0] || 'https://via.placeholder.com/40x40?text=Game'}
+                                alt={item.game?.title || 'Deleted Game'}
                                 sx={{ width: 40, height: 40, mr: 2, borderRadius: 1 }}
                               />
-                              <Typography variant="body1">
-                                <Link to={`/game/${item.game._id}`} style={{ color: 'inherit' }}>
-                                  {item.game.title}
-                                </Link>
-                              </Typography>
+                              <Box>
+                                <Typography variant="body1">
+                                  {item.game ? (
+                                    <Link to={`/game/${item.game._id}`} style={{ color: 'inherit' }}>
+                                      {item.game.title}
+                                    </Link>
+                                  ) : (
+                                    <span style={{ color: '#999', fontStyle: 'italic' }}>
+                                      Game no longer available
+                                    </span>
+                                  )}
+                                </Typography>
+                                {!item.game && (
+                                  <Typography variant="caption" color="error">
+                                    This game has been removed from the store
+                                  </Typography>
+                                )}
+                              </Box>
                             </Box>
                           </TableCell>
                           <TableCell>{item.quantity}</TableCell>
                           <TableCell>৳{item.price.toFixed(2)}</TableCell>
                           <TableCell align="right">
-                            <Button
-                              size="small"
-                              startIcon={<GetApp />}
-                              component={Link}
-                              to={`/game/${item.game._id}`}
-                            >
-                              Download
-                            </Button>
+                            {item.game ? (
+                              <Button
+                                size="small"
+                                startIcon={<GetApp />}
+                                component={Link}
+                                to={`/game/${item.game._id}`}
+                              >
+                                Download
+                              </Button>
+                            ) : (
+                              <Tooltip title="Game no longer available">
+                                <span>
+                                  <Button
+                                    size="small"
+                                    disabled
+                                    startIcon={<GetApp />}
+                                  >
+                                    Download
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

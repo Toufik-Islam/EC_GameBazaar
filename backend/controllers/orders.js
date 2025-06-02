@@ -105,12 +105,29 @@ exports.getOrders = async (req, res) => {
       select: 'title images'
     });
 
+    // Count orders with null games for admin monitoring
+    let ordersWithNullGames = 0;
+    let totalNullGames = 0;
+    
+    orders.forEach(order => {
+      const nullGameItems = order.orderItems.filter(item => !item.game);
+      if (nullGameItems.length > 0) {
+        ordersWithNullGames++;
+        totalNullGames += nullGameItems.length;
+      }
+    });
+
+    if (ordersWithNullGames > 0) {
+      console.log(`[Admin Orders] Warning: ${ordersWithNullGames} orders contain ${totalNullGames} null game references`);
+    }
+
     res.status(200).json({
       success: true,
       count: orders.length,
       data: orders
     });
   } catch (err) {
+    console.error('[Admin Orders] Error fetching orders:', err);
     res.status(500).json({
       success: false,
       message: err.message
@@ -128,12 +145,21 @@ exports.getMyOrders = async (req, res) => {
       select: 'title images price discountPrice'
     });
 
+    // Log any orders with null games for monitoring
+    orders.forEach(order => {
+      const nullGameItems = order.orderItems.filter(item => !item.game);
+      if (nullGameItems.length > 0) {
+        console.log(`[Order History] Order ${order._id} has ${nullGameItems.length} null game references`);
+      }
+    });
+
     res.status(200).json({
       success: true,
       count: orders.length,
       data: orders
     });
   } catch (err) {
+    console.error('[Order History] Error fetching user orders:', err);
     res.status(500).json({
       success: false,
       message: err.message
@@ -170,11 +196,18 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
+    // Log any null games for monitoring
+    const nullGameItems = order.orderItems.filter(item => !item.game);
+    if (nullGameItems.length > 0) {
+      console.log(`[Order Details] Order ${order._id} has ${nullGameItems.length} null game references`);
+    }
+
     res.status(200).json({
       success: true,
       data: order
     });
   } catch (err) {
+    console.error('[Order Details] Error fetching order:', err);
     res.status(500).json({
       success: false,
       message: err.message
