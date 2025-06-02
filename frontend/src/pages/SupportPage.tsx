@@ -1,12 +1,29 @@
 
-import React from 'react';
-import { Container, Typography, Paper, Grid, Box, Button, TextField, MenuItem } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, Typography, Paper, Grid, Box, Button, TextField, MenuItem, Alert, Snackbar } from '@mui/material';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import EmailIcon from '@mui/icons-material/Email';
 import ChatIcon from '@mui/icons-material/Chat';
 import PhoneIcon from '@mui/icons-material/Phone';
+import SendIcon from '@mui/icons-material/Send';
 
 export default function SupportPage() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    orderNumber: '',
+    category: '',
+    subject: '',
+    description: ''
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error'
+  });
+
   const supportCategories = [
     { value: '', label: 'Select an issue category' },
     { value: 'order', label: 'Order Issues' },
@@ -17,6 +34,79 @@ export default function SupportPage() {
     { value: 'return', label: 'Returns & Refunds' },
     { value: 'other', label: 'Other' }
   ];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.category || !formData.subject || !formData.description) {
+      setNotification({
+        open: true,
+        message: 'Please fill in all required fields',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/support/ticket`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotification({
+          open: true,
+          message: 'Support ticket submitted successfully! We will respond within 24 hours.',
+          severity: 'success'
+        });
+        
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          orderNumber: '',
+          category: '',
+          subject: '',
+          description: ''
+        });
+      } else {
+        setNotification({
+          open: true,
+          message: data.error || 'Failed to submit support ticket. Please try again.',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting support ticket:', error);
+      setNotification({
+        open: true,
+        message: 'Network error. Please check your connection and try again.',
+        severity: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -58,7 +148,7 @@ export default function SupportPage() {
               Start Chat
             </Button>
             <Typography variant="caption" align="center" sx={{ mt: 1 }}>
-              Available 24/7
+              Upcoming 24/7
             </Typography>
           </Paper>
         </Grid>
@@ -73,10 +163,10 @@ export default function SupportPage() {
               Call us for immediate assistance.
             </Typography>
             <Typography variant="body1" color="primary" fontWeight="bold" align="center">
-              +1-800-GAME-123
+              +880 123 456 789
             </Typography>
             <Typography variant="caption" align="center" sx={{ mt: 1 }}>
-              Monday-Friday: 9am-6pm EST
+              Everyday: 24 hour
             </Typography>
           </Paper>
         </Grid>
@@ -87,7 +177,7 @@ export default function SupportPage() {
           Submit a Support Ticket
         </Typography>
         
-        <Box component="form" noValidate sx={{ mt: 2 }}>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -95,6 +185,8 @@ export default function SupportPage() {
                 fullWidth
                 label="Full Name"
                 name="name"
+                value={formData.name}
+                onChange={handleInputChange}
                 autoComplete="name"
               />
             </Grid>
@@ -104,6 +196,9 @@ export default function SupportPage() {
                 fullWidth
                 label="Email Address"
                 name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
                 autoComplete="email"
               />
             </Grid>
@@ -112,6 +207,8 @@ export default function SupportPage() {
                 fullWidth
                 label="Order Number (if applicable)"
                 name="orderNumber"
+                value={formData.orderNumber}
+                onChange={handleInputChange}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -120,7 +217,9 @@ export default function SupportPage() {
                 required
                 fullWidth
                 label="Issue Category"
-                defaultValue=""
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
               >
                 {supportCategories.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -135,6 +234,8 @@ export default function SupportPage() {
                 fullWidth
                 label="Subject"
                 name="subject"
+                value={formData.subject}
+                onChange={handleInputChange}
               />
             </Grid>
             <Grid item xs={12}>
@@ -145,6 +246,8 @@ export default function SupportPage() {
                 rows={4}
                 label="Description of Issue"
                 name="description"
+                value={formData.description}
+                onChange={handleInputChange}
                 placeholder="Please provide as much detail as possible about your issue"
               />
             </Grid>
@@ -155,14 +258,32 @@ export default function SupportPage() {
                 variant="contained"
                 color="primary"
                 size="large"
+                disabled={isSubmitting}
+                startIcon={<SendIcon />}
                 sx={{ mt: 2 }}
               >
-                Submit Ticket
+                {isSubmitting ? 'Submitting...' : 'Submit Ticket'}
               </Button>
             </Grid>
           </Grid>
         </Box>
       </Paper>
+      
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
