@@ -323,6 +323,136 @@ class EmailService {
     };
     return categories[category] || category;
   }
+
+  async sendContactFormEmail(contactData) {
+    try {
+      const { firstName, lastName, email, subject, message } = contactData;
+      
+      console.log(`📧 Sending contact form email to touhid12321@gmail.com...`);
+      
+      const contactSubject = `Contact Form: ${subject}`;
+      const contactHtml = this.generateContactFormEmailHTML(contactData);
+      
+      // Send email to designated contact email
+      const result = await this.sendEmail('touhid12321@gmail.com', contactSubject, contactHtml);
+      
+      if (result.success) {
+        // Send confirmation email to customer
+        const confirmationSubject = 'Thank you for contacting GameBazaar';
+        const confirmationHtml = this.generateContactConfirmationEmailHTML(contactData);
+        
+        await this.sendEmail(email, confirmationSubject, confirmationHtml);
+        console.log('✅ Contact form and confirmation emails sent successfully');
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to send contact form email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  generateContactFormEmailHTML(contactData) {
+    const { firstName, lastName, email, subject, message } = contactData;
+    
+    return `
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .field { margin-bottom: 15px; }
+          .label { font-weight: bold; color: #555; }
+          .value { background: white; padding: 10px; border-radius: 5px; border-left: 4px solid #667eea; }
+          .message { background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; white-space: pre-wrap; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎮 GameBazaar</h1>
+            <h2>New Contact Form Message</h2>
+          </div>
+          <div class="content">
+            <div class="field">
+              <div class="label">From:</div>
+              <div class="value">${firstName} ${lastName}</div>
+            </div>
+            
+            <div class="field">
+              <div class="label">Email Address:</div>
+              <div class="value">${email}</div>
+            </div>
+            
+            <div class="field">
+              <div class="label">Subject:</div>
+              <div class="value">${subject}</div>
+            </div>
+            
+            <div class="field">
+              <div class="label">Message:</div>
+              <div class="message">${message}</div>
+            </div>
+            
+            <p><small>This message was sent on ${new Date().toLocaleString()}</small></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  generateContactConfirmationEmailHTML(contactData) {
+    const { firstName, lastName, subject } = contactData;
+    
+    return `
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .message-info { background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎮 GameBazaar</h1>
+            <h2>Thank You for Contacting Us!</h2>
+          </div>
+          <div class="content">
+            <p>Dear ${firstName} ${lastName},</p>
+            
+            <p>Thank you for reaching out to GameBazaar! We have received your message and our team will review it promptly.</p>
+            
+            <div class="message-info">
+              <h3>Your Message Details:</h3>
+              <p><strong>Subject:</strong> ${subject}</p>
+              <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <p><strong>What happens next?</strong></p>
+            <ul>
+              <li>Our team will review your message within 24 hours</li>
+              <li>You will receive a response via email at the address you provided</li>
+              <li>For urgent inquiries, you can also call us at +880 1234-567890</li>
+            </ul>
+            
+            <p>We appreciate your interest in GameBazaar and look forward to assisting you!</p>
+            
+            <p>Best regards,<br>
+            The GameBazaar Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
 }
 
 module.exports = new EmailService();

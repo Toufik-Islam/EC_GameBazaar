@@ -1,11 +1,99 @@
-import React from 'react';
-import { Container, Typography, Grid, Paper, Box, TextField, Button, Divider } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, Typography, Grid, Paper, Box, TextField, Button, Divider, Alert, Snackbar } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SendIcon from '@mui/icons-material/Send';
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error'
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.subject || !formData.message) {
+      setNotification({
+        open: true,
+        message: 'Please fill in all required fields',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/support/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotification({
+          open: true,
+          message: 'Your message has been sent successfully! We will get back to you soon.',
+          severity: 'success'
+        });
+        
+        // Reset form
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+      } else {
+        setNotification({
+          open: true,
+          message: data.error || 'Failed to send your message. Please try again.',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      setNotification({
+        open: true,
+        message: 'Network error. Please check your connection and try again.',
+        severity: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h3" component="h1" gutterBottom align="center">
@@ -21,7 +109,7 @@ export default function ContactPage() {
             </Typography>
             <Divider sx={{ mb: 3 }} />
             
-            <Box component="form" noValidate>
+            <Box component="form" onSubmit={handleSubmit} noValidate>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
@@ -29,6 +117,8 @@ export default function ContactPage() {
                     fullWidth
                     label="First Name"
                     name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
                     autoComplete="given-name"
                   />
                 </Grid>
@@ -38,6 +128,8 @@ export default function ContactPage() {
                     fullWidth
                     label="Last Name"
                     name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
                     autoComplete="family-name"
                   />
                 </Grid>
@@ -47,6 +139,9 @@ export default function ContactPage() {
                     fullWidth
                     label="Email Address"
                     name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     autoComplete="email"
                   />
                 </Grid>
@@ -56,6 +151,8 @@ export default function ContactPage() {
                     fullWidth
                     label="Subject"
                     name="subject"
+                    value={formData.subject}
+                    onChange={handleInputChange}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -66,6 +163,9 @@ export default function ContactPage() {
                     rows={4}
                     label="Message"
                     name="message"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about your inquiry, feedback, or any questions you have"
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -75,9 +175,11 @@ export default function ContactPage() {
                     variant="contained"
                     color="primary"
                     size="large"
+                    disabled={isSubmitting}
+                    startIcon={<SendIcon />}
                     sx={{ mt: 2 }}
                   >
-                    Send Message
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </Button>
                 </Grid>
               </Grid>
@@ -168,6 +270,22 @@ export default function ContactPage() {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
