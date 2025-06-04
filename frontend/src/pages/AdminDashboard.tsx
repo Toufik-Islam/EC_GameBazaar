@@ -124,10 +124,10 @@ export default function AdminDashboard() {
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  
-  // Search states for orders
+    // Search states for orders and games
+  const [searchQuery, setSearchQuery] = useState('');
   const [pendingSearchTerm, setPendingSearchTerm] = useState('');
-  const [completedSearchTerm, setCompletedSearchTerm] = useState('');  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const [completedSearchTerm, setCompletedSearchTerm] = useState('');const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Load appropriate data when tab changes
     if (newValue === 1) {
@@ -147,7 +147,6 @@ export default function AdminDashboard() {
   const handleCompletedSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCompletedSearchTerm(e.target.value);
   };
-
   // Filter functions for orders
   const filteredPendingOrders = pendingOrders.filter(order => 
     order._id.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
@@ -164,11 +163,19 @@ export default function AdminDashboard() {
     order.status.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
     order.orderItems.some(item => 
       item.game && item.game.title.toLowerCase().includes(completedSearchTerm.toLowerCase())
-    )
-  );
+    )  );
 
   const [games, setGames] = useState<Game[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
+
+  // Filter games based on search query
+  const filteredGames = games.filter(game => 
+    game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (game.genre && game.genre.some(g => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+    (game.platform && game.platform.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+    (game.developer && game.developer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (game.publisher && game.publisher.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
   const [newGame, setNewGame] = useState({
     title: '',
     price: '',
@@ -833,11 +840,10 @@ export default function AdminDashboard() {
           relatedGames: [],
           readTime: 5
         });
-        setOpenAddBlog(false);      } else {
-        // Handle validation errors array from backend
+        setOpenAddBlog(false);      } else {        // Handle validation errors array from backend
         if (data.errors && Array.isArray(data.errors)) {
           // Display validation errors in a more readable format
-          const formattedErrors = data.errors.map(err => `• ${err}`).join('\n');
+          const formattedErrors = data.errors.map((err: string) => `• ${err}`).join('\n');
           setError(`Validation Error:\n${formattedErrors}`);
         } else {
           setError(data.message || 'Failed to create blog');
@@ -964,11 +970,10 @@ export default function AdminDashboard() {
           readTime: 5
         });
         setSelectedBlog(null);
-        setOpenEditBlog(false);      } else {
-        // Handle validation errors array from backend
+        setOpenEditBlog(false);      } else {        // Handle validation errors array from backend
         if (data.errors && Array.isArray(data.errors)) {
           // Display validation errors in a more readable format
-          const formattedErrors = data.errors.map(err => `• ${err}`).join('\n');
+          const formattedErrors = data.errors.map((err: string) => `• ${err}`).join('\n');
           setError(`Validation Error:\n${formattedErrors}`);
         } else {
           setError(data.message || 'Failed to update blog');
@@ -1032,75 +1037,363 @@ export default function AdminDashboard() {
   if (!isAdmin()) {
     return <Typography>Access Denied</Typography>;
   }
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
-      
-      {/* Notifications */}
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
-        <Alert onClose={() => setError(null)} severity="error">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        py: 4
+      }}
+    >
+      <Container maxWidth="lg">        {/* Header Section */}
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            p: 4,
+            mb: 4,
+            borderRadius: 4,
+            textAlign: 'center'
+          }}
+        >
+          <Typography 
+            variant="h3" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              color: '#2c3e50',
+              mb: 1
+            }}
+          >
+            🛠️ Admin Dashboard
+          </Typography>
+          <Typography variant="h6" sx={{ color: '#5a6c7d' }}>
+            Manage games, orders, and content
+          </Typography>
+        </Paper>
+
+        {/* Quick Stats Section */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: ' rgba(118, 75, 162, 0.1) 100%)',
+                border: '1px solid rgba(102, 126, 234, 0.2)',
+              }}
+            >
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#667eea', mb: 1 }}>
+                {games.length}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5a6c7d', fontWeight: 600 }}>
+                Total Games
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%)',
+                border: '1px solid rgba(255, 193, 7, 0.2)',
+              }}
+            >
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#ffc107', mb: 1 }}>
+                {pendingOrders.length}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5a6c7d', fontWeight: 600 }}>
+                Pending Orders
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%)',
+                border: '1px solid rgba(76, 175, 80, 0.2)',
+              }}
+            >
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#4caf50', mb: 1 }}>
+                {completedOrders.length}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5a6c7d', fontWeight: 600 }}>
+                Completed Orders
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'rgba(123, 31, 162, 0.1) 100%)',
+                border: '1px solid rgba(156, 39, 176, 0.2)',
+              }}
+            >
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#9c27b0', mb: 1 }}>
+                {blogs.length}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5a6c7d', fontWeight: 600 }}>
+                Published Blogs
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+      {/* Notifications */}      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
+        <Alert onClose={() => setError(null)} severity="error" className="high-contrast-text">
           {error}
         </Alert>
       </Snackbar>
       
       <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess(null)}>
-        <Alert onClose={() => setSuccess(null)} severity="success">
+        <Alert onClose={() => setSuccess(null)} severity="success" className="high-contrast-text">
           {success}
         </Alert>
       </Snackbar>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Game Management" />
-          <Tab label="Pending Orders" />
-          <Tab label="Processed Orders" />
-          <Tab label="Blog Management" />
-        </Tabs>
-      </Box>
 
-      {tabValue === 0 && (
-        <Box>
-          <Button 
-            variant="contained" 
-            onClick={() => setOpenAddGame(true)}
-            sx={{ mb: 3 }}
-          >
-            Add New Game
-          </Button>
+        {/* Tabs Navigation */}
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            mb: 4,
+            borderRadius: 3,
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange}
+              variant="fullWidth"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  py: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                  },
+                  '&.Mui-selected': {
+                    color: '#667eea',
+                    fontWeight: 700,
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                }
+              }}
+            >
+              <Tab label="🎮 Game Management" />
+              <Tab label="📦 Pending Orders" />
+              <Tab label="✅ Processed Orders" />
+              <Tab label="📝 Blog Management" />
+            </Tabs>
+          </Box>
+        </Paper>      {tabValue === 0 && (
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            mb: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+              🎮 Game Management
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => setOpenAddGame(true)}
+              sx={{
+                borderRadius: 3,
+                px: 3,
+                py: 1.5,
+                fontWeight: 600,
+                background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #5a6fd8, #6a42a0)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                }
+              }}
+            >              ➕ Add New Game
+            </Button>
+          </Box>          {/* Search Box */}
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              placeholder="🔍 Search games by title, genre, or platform..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: '#667eea' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: 'rgba(102, 126, 234, 0.4)',
+                    transform: 'translateY(-1px)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#667eea',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                  }
+                }
+              }}            />
+          </Box>
 
-          {loading && <CircularProgress />}
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#667eea' }} />
+            </Box>
+          )}
 
-          <Grid container spacing={2}>
-            {games.map((game) => (
-              <Grid item xs={12} key={game._id}>
-                <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="h6">{game.title}</Typography>
-                    <Typography color="text.secondary">${game.price}</Typography>
+          {!loading && filteredGames.length === 0 && searchQuery && (
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.8)',
+                mb: 3,
+              }}
+            >
+              <Typography variant="h6" sx={{ color: '#5a6c7d', mb: 1 }}>
+                🔍 No games found
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7a8b9c' }}>
+                No games match your search criteria. Try adjusting your search terms.
+              </Typography>
+            </Paper>
+          )}
+
+          {!loading && filteredGames.length === 0 && !searchQuery && games.length === 0 && (
+            <Paper
+              elevation={0}
+              className="glassmorphism"
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.8)',
+                mb: 3,
+              }}
+            >
+              <Typography variant="h6" sx={{ color: '#5a6c7d', mb: 1 }}>
+                🎮 No games yet
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7a8b9c' }}>
+                Start by adding your first game to the catalog.
+              </Typography>
+            </Paper>
+          )}
+
+          <Grid container spacing={3}>
+            {filteredGames.map((game) => (
+              <Grid item xs={12} md={6} lg={4} key={game._id}>
+                <Paper 
+                  elevation={0}
+                  className="glassmorphism"
+                  sx={{ 
+                    p: 3, 
+                    borderRadius: 3,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 12px 35px rgba(0, 0, 0, 0.15)'
+                    }
+                  }}
+                >
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 1 }}>
+                      {game.title}
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#667eea', fontWeight: 700 }}>
+                      ৳{game.price}
+                    </Typography>
                     {game.genre && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                        {game.genre.map(g => (
-                          <Chip key={g} label={g} size="small" />
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 2 }}>                        {game.genre.map(g => (
+                          <Chip 
+                            key={g} 
+                            label={g} 
+                            size="small"
+                            sx={{
+                              backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea',
+                              fontWeight: 500
+                            }}
+                          />
                         ))}
                       </Box>
                     )}
                   </Box>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                     <Button
                       variant="outlined"
-                      color="primary"
                       onClick={() => handleEditGame(game)}
                       startIcon={<Edit />}
+                      sx={{
+                        borderRadius: 2,
+                        borderColor: '#667eea',
+                        color: '#667eea',
+                        '&:hover': {
+                          borderColor: '#5a6fd8',
+                          backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                        }
+                      }}
                     >
-                      Edit Game
+                      Edit
                     </Button>
                     <Button
                       variant="outlined"
-                      color="error"
                       onClick={() => handleRemoveGame(game._id)}
                       startIcon={<Delete />}
+                      sx={{
+                        borderRadius: 2,
+                        borderColor: '#ff4757',
+                        color: '#ff4757',
+                        '&:hover': {
+                          borderColor: '#ff3742',
+                          backgroundColor: 'rgba(255, 71, 87, 0.08)',
+                        }
+                      }}
                     >
-                      Remove Game
+                      Delete
                     </Button>
                   </Stack>
                 </Paper>
@@ -1297,7 +1590,7 @@ export default function AdminDashboard() {
                           value={newGame.discountPrice}
                           onChange={(e) => setNewGame({...newGame, discountPrice: e.target.value})}
                           InputProps={{
-                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                            startAdornment: <InputAdornment position="start">৳</InputAdornment>,
                           }}
                           helperText="Enter the discounted price (must be lower than regular price)"
                         />
@@ -1550,7 +1843,7 @@ export default function AdminDashboard() {
                           value={newGame.discountPrice}
                           onChange={(e) => setNewGame({...newGame, discountPrice: e.target.value})}
                           InputProps={{
-                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                            startAdornment: <InputAdornment position="start">৳</InputAdornment>,
                           }}
                           helperText="Enter the discounted price (must be lower than regular price)"
                         />
@@ -1610,17 +1903,39 @@ export default function AdminDashboard() {
                 disabled={loading}
               >
                 {loading ? <CircularProgress size={24} /> : 'Update Game'}
-              </Button>
-            </DialogActions>
+              </Button>            </DialogActions>
           </Dialog>
-        </Box>
-      )}      {tabValue === 1 && (
-        <Box>
-          {/* Search field for pending orders */}
-          <Paper sx={{ p: 2, mb: 3 }}>
+        </Paper>
+      )}
+        {tabValue === 1 && (
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            mb: 3
+          }}
+        >
+          <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+            📦 Pending Orders
+          </Typography>
+            {/* Search field for pending orders */}
+          <Paper 
+            elevation={0}
+            className="glassmorphism"
+            sx={{ 
+              p: 3, 
+              mb: 3, 
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+            }}
+          >
             <TextField
               fullWidth
-              placeholder="Search pending orders by ID, customer name, email, or game title..."
+              placeholder="🔍 Search pending orders by ID, customer name, email, or game title..."
               variant="outlined"
               size="small"
               value={pendingSearchTerm}
@@ -1628,27 +1943,56 @@ export default function AdminDashboard() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search />
+                    <Search sx={{ color: '#667eea' }} />
                   </InputAdornment>
                 ),
               }}
-            />
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': {
+                    backgroundColor: '#ffffff',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: '#ffffff',
+                    borderColor: '#667eea',
+                  }
+                }
+              }}            />
           </Paper>
 
-          {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
+          {orderError && <Alert severity="error" sx={{ mb: 2 }} className="high-contrast-text">{orderError}</Alert>}
           
           {orderLoading ? (
             <CircularProgress />
           ) : filteredPendingOrders.length === 0 ? (
             pendingSearchTerm ? (
-              <Alert severity="info">No pending orders match your search criteria</Alert>
+              <Alert severity="info" className="high-contrast-text">No pending orders match your search criteria</Alert>
             ) : (
-              <Alert severity="info">No pending orders found</Alert>
+              <Alert severity="info" className="high-contrast-text">No pending orders found</Alert>
             )
-          ) : (
-            <List>
+          ) : (            <List>
               {filteredPendingOrders.map((order) => (
-                <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
+                <Paper 
+                  key={order._id} 
+                  elevation={0}
+                  className="glassmorphism"
+                  sx={{ 
+                    mb: 3, 
+                    p: 3,
+                    borderRadius: 3,
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                    }
+                  }}
+                >
                   <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                     <ListItemText
                       primary={
@@ -1687,30 +2031,63 @@ export default function AdminDashboard() {
                         </ListItem>
                       ))}
                     </List>
-                    
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', mt: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', mt: 3 }}>
                       <Button 
                         variant="contained" 
-                        color="primary"
                         onClick={() => approveOrder(order._id)}
                         disabled={orderLoading}
+                        sx={{
+                          borderRadius: 3,
+                          px: 4,
+                          py: 1.5,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          background: 'linear-gradient(45deg, #66bb6a, #4caf50)',
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #4caf50, #388e3c)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)'
+                          }
+                        }}
                       >
-                        {orderLoading ? <CircularProgress size={24} /> : 'Approve Order'}
+                        {orderLoading ? <CircularProgress size={24} color="inherit" /> : '✅ Approve Order'}
                       </Button>
                     </Box>
                   </ListItem>
                 </Paper>
-              ))}
-            </List>
+              ))}            </List>
           )}
-        </Box>
-      )}      {tabValue === 2 && (
-        <Box>
-          {/* Search field for processed orders */}
-          <Paper sx={{ p: 2, mb: 3 }}>
+        </Paper>
+      )}
+        {tabValue === 2 && (
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            mb: 3
+          }}
+        >
+          <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+            ✅ Processed Orders
+          </Typography>
+            {/* Search field for processed orders */}
+          <Paper 
+            elevation={0}
+            className="glassmorphism"
+            sx={{ 
+              p: 3, 
+              mb: 3, 
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+            }}
+          >
             <TextField
               fullWidth
-              placeholder="Search processed orders by ID, customer name, email, status, or game title..."
+              placeholder="🔍 Search processed orders by ID, customer name, email, status, or game title..."
               variant="outlined"
               size="small"
               value={completedSearchTerm}
@@ -1718,27 +2095,56 @@ export default function AdminDashboard() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search />
+                    <Search sx={{ color: '#667eea' }} />
                   </InputAdornment>
                 ),
               }}
-            />
-          </Paper>
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': {
+                    backgroundColor: '#ffffff',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: '#ffffff',
+                    borderColor: '#667eea',
+                  }
+                }
+              }}
+            />          </Paper>
 
-          {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
+          {orderError && <Alert severity="error" sx={{ mb: 2 }} className="high-contrast-text">{orderError}</Alert>}
           
           {orderLoading ? (
             <CircularProgress />
           ) : filteredCompletedOrders.length === 0 ? (
             completedSearchTerm ? (
-              <Alert severity="info">No processed orders match your search criteria</Alert>
+              <Alert severity="info" className="high-contrast-text">No processed orders match your search criteria</Alert>
             ) : (
-              <Alert severity="info">No processed orders found</Alert>
+              <Alert severity="info" className="high-contrast-text">No processed orders found</Alert>
             )
-          ) : (
-            <List>
+          ) : (            <List>
               {filteredCompletedOrders.map((order) => (
-                <Paper key={order._id} sx={{ mb: 2, p: 2 }}>
+                <Paper 
+                  key={order._id} 
+                  elevation={0}
+                  className="glassmorphism"
+                  sx={{ 
+                    mb: 3, 
+                    p: 3,
+                    borderRadius: 3,
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                    }
+                  }}
+                >
                   <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                     <ListItemText
                       primary={
@@ -1790,27 +2196,70 @@ export default function AdminDashboard() {
                     </List>
                   </ListItem>
                 </Paper>
-              ))}
-            </List>          )}
-        </Box>
-      )}
+              ))}            </List>
+          )}
+        </Paper>
+      )}      {tabValue === 3 && (
+        <Paper
+          elevation={0}
+          className="glassmorphism"
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            mb: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+              📝 Blog Management
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => setOpenAddBlog(true)}
+              sx={{
+                borderRadius: 3,
+                px: 3,
+                py: 1.5,
+                fontWeight: 600,
+                background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #5a6fd8, #6a42a0)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                }
+              }}
+            >
+              ➕ Add New Blog
+            </Button>
+          </Box>
 
-      {tabValue === 3 && (
-        <Box>
-          <Button 
-            variant="contained" 
-            onClick={() => setOpenAddBlog(true)}
-            sx={{ mb: 3 }}
-          >
-            Add New Blog
-          </Button>
-
-          {loading && <CircularProgress />}
-
-          <Grid container spacing={2}>
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#667eea' }} />
+            </Box>
+          )}          <Grid container spacing={3}>
             {blogs.map((blog) => (
               <Grid item xs={12} key={blog._id}>
-                <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Paper 
+                  elevation={0}
+                  className="glassmorphism"
+                  sx={{ 
+                    p: 3, 
+                    borderRadius: 3,
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                    transition: 'all 0.3s ease',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+                      borderColor: 'rgba(102, 126, 234, 0.3)',
+                    }
+                  }}
+                >
                   <Box>
                     <Typography variant="h6">{blog.title}</Typography>
                     <Typography color="text.secondary">{blog.blogType}</Typography>
@@ -1824,21 +2273,42 @@ export default function AdminDashboard() {
                         ))}
                       </Box>
                     )}
-                  </Box>
-                  <Stack direction="row" spacing={1}>
+                  </Box>                  <Stack direction="row" spacing={2}>
                     <Button
                       variant="outlined"
-                      color="primary"
                       onClick={() => handleEditBlog(blog)}
                       startIcon={<Edit />}
+                      sx={{
+                        borderRadius: 2,
+                        borderColor: '#667eea',
+                        color: '#667eea',
+                        fontWeight: 600,
+                        px: 3,
+                        '&:hover': {
+                          borderColor: '#5a6fd8',
+                          backgroundColor: 'rgba(102, 126, 234, 0.08)',
+                          transform: 'translateY(-1px)',
+                        }
+                      }}
                     >
                       Edit Blog
                     </Button>
                     <Button
                       variant="outlined"
-                      color="error"
                       onClick={() => handleRemoveBlog(blog._id)}
                       startIcon={<Delete />}
+                      sx={{
+                        borderRadius: 2,
+                        borderColor: '#ff4757',
+                        color: '#ff4757',
+                        fontWeight: 600,
+                        px: 3,
+                        '&:hover': {
+                          borderColor: '#ff3742',
+                          backgroundColor: 'rgba(255, 71, 87, 0.08)',
+                          transform: 'translateY(-1px)',
+                        }
+                      }}
                     >
                       Remove Blog
                     </Button>
@@ -2142,11 +2612,11 @@ export default function AdminDashboard() {
                 disabled={loading}
               >
                 {loading ? <CircularProgress size={24} /> : 'Update Blog'}
-              </Button>
-            </DialogActions>
+              </Button>            </DialogActions>
           </Dialog>
-        </Box>
+        </Paper>
       )}
-    </Container>
+      </Container>
+    </Box>
   );
 }

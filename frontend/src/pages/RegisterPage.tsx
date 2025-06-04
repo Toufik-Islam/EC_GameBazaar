@@ -194,18 +194,15 @@ export default function RegisterPage() {
   };
   
   return (
-    <Container maxWidth="sm">
-      <Snackbar 
+    <Container maxWidth="sm">      <Snackbar 
         open={notification !== null} 
         autoHideDuration={6000} 
         onClose={closeNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {notification && (
-          <Alert onClose={closeNotification} severity={notification.type}>
-            {notification.message}
-          </Alert>
-        )}
+        <Alert onClose={closeNotification} severity={notification?.type || 'info'}>
+          {notification?.message}
+        </Alert>
       </Snackbar>
 
       <Paper elevation={3} sx={{ mt: 8, p: 4, mb: 4 }}>

@@ -25,7 +25,19 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import { Add, Remove, Delete, ShoppingBag, Download, CheckCircle } from '@mui/icons-material';
+import { 
+  Add, 
+  Remove, 
+  Delete, 
+  ShoppingBag, 
+  Download, 
+  CheckCircle,
+  LocalOffer,
+  Payment,
+  Security,
+  ShoppingCart,
+  CreditCard
+} from '@mui/icons-material';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 // Import jsPDF and jspdf-autotable correctly
@@ -690,251 +702,491 @@ export default function CartPage() {
 
   if (!user) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
-        <Typography variant="h5" gutterBottom>
-          Please login to view your cart
-        </Typography>
-        <Button 
-          variant="contained" 
-          component={Link} 
-          to="/login"
-          sx={{ mt: 2 }}
-        >
-          Go to Login
-        </Button>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box className="glassmorphism" sx={{ 
+          p: 6, 
+          textAlign: 'center',
+          borderRadius: 4,
+          background: 'rgba(255,255,255,0.05))',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          animation: 'fadeInUp 0.8s ease-out'
+        }}>
+          <ShoppingCart sx={{ fontSize: 80, color: '#1976d2', mb: 2 }} />
+          <Typography variant="h5" gutterBottom className="gradient-text">
+            Please login to view your cart
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Sign in to see your saved items and continue shopping
+          </Typography>
+          <Button 
+            variant="contained" 
+            component={Link} 
+            to="/login"
+            size="large"
+            sx={{
+              background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Go to Login
+          </Button>
+        </Box>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg">      <Snackbar 
-        open={notification !== null} 
-        autoHideDuration={6000} 
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>        <Typography variant="h3" component="h1" className="high-contrast-text" gutterBottom sx={{
+          fontWeight: 'bold',
+          background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+          backgroundClip: 'text',
+          textFillColor: 'transparent',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          textAlign: 'center'
+        }}>
+          Shopping Cart
+        </Typography>
+        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
+          Review your items and complete your purchase
+        </Typography>
+      </Box>      {/* Notification Snackbar */}      {notification !== null && (
+        <Snackbar 
+          open={true} 
+          autoHideDuration={6000} 
+          onClose={closeNotification}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert onClose={closeNotification} severity={notification.type} className="high-contrast-text">
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      )}      {/* Shipping Address Section */}
+      <Paper 
+        elevation={0}
+        className="glassmorphism" 
+        sx={{ 
+          p: 4, 
+          mb: 4, 
+          borderRadius: 4,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          animation: 'fadeInUp 0.6s ease-out'
+        }}
       >
-        <Alert onClose={closeNotification} severity={notification?.type || 'info'}>
-          {notification?.message || ''}
-        </Alert>
-      </Snackbar>      <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
-        Shopping Cart
-      </Typography>
-
-      <Box sx={{ mt: 4 }}>
-        {/* Shipping Address Section */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Shipping Address
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <Security sx={{ mr: 2, color: '#1976d2' }} />
+          <Typography variant="h5" className="gradient-text">
+            Shipping Information
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email Address"
-                value={user?.email || ''}
-                disabled
-                helperText="Email from your registered account"
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Street Address *"
-                value={shippingAddress.street}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, street: e.target.value }))}
-                placeholder="Enter your full street address"
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="City *"
-                value={shippingAddress.city}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
-                placeholder="Enter your city"
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="State/Division *"
-                value={shippingAddress.state}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
-                placeholder="Enter your state or division"
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="ZIP/Postal Code *"
-                value={shippingAddress.zipCode}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                placeholder="Enter your postal code"
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Country"
-                value={shippingAddress.country}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
-                placeholder="Enter your country"
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mobile Number *"
-                value={shippingAddress.mobile}
-                onChange={(e) => setShippingAddress(prev => ({ ...prev, mobile: e.target.value }))}
-                placeholder="Enter your mobile number for delivery contact"
-                type="tel"
-                required
-                helperText="Required for delivery contact (10-15 digits)"
-              />
-            </Grid>
+        </Box>
+          <Grid container spacing={3}>
+          <Grid item xs={12}>            <TextField
+              fullWidth
+              label="Street Address *"
+              value={shippingAddress.street}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, street: e.target.value }))}
+              placeholder="Enter your full street address"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
           </Grid>
-        </Paper>
-
-        <Typography variant="h6">Payment Method</Typography>
-        <RadioGroup value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-          <FormControlLabel value="card" control={<Radio />} label="Credit/Debit Card" />
-          <FormControlLabel value="paypal" control={<Radio />} label="PayPal" />
-          <FormControlLabel value="bkash" control={<Radio />} label="bKash" />
-          <FormControlLabel value="nagad" control={<Radio />} label="Nagad" />
+          <Grid item xs={12} sm={6}>            <TextField
+              fullWidth
+              label="City *"
+              value={shippingAddress.city}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
+              placeholder="Enter your city"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>            <TextField
+              fullWidth
+              label="State/Division *"
+              value={shippingAddress.state}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
+              placeholder="Enter your state or division"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>            <TextField
+              fullWidth
+              label="ZIP/Postal Code *"
+              value={shippingAddress.zipCode}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
+              placeholder="Enter your postal code"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>            <TextField
+              fullWidth
+              label="Country"
+              value={shippingAddress.country}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
+              placeholder="Enter your country"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12}>            <TextField
+              fullWidth
+              label="Mobile Number *"
+              value={shippingAddress.mobile}
+              onChange={(e) => setShippingAddress(prev => ({ ...prev, mobile: e.target.value }))}
+              placeholder="Enter your mobile number for delivery contact"
+              type="tel"
+              required
+              helperText="Required for delivery contact (10-15 digits)"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>      {/* Payment Method Section */}
+      <Paper 
+        elevation={0}
+        className="glassmorphism"
+        sx={{ 
+          p: 4, 
+          mb: 4, 
+          borderRadius: 4,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          animation: 'fadeInUp 0.7s ease-out'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <Payment sx={{ mr: 2, color: '#1976d2' }} />
+          <Typography variant="h5" className="gradient-text">
+            Payment Method
+          </Typography>
+        </Box>
+        
+        <RadioGroup 
+          value={paymentMethod} 
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          sx={{ mb: 3 }}
+        >
+          <FormControlLabel 
+            value="card" 
+            control={<Radio />} 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CreditCard sx={{ mr: 1 }} />
+                Credit/Debit Card
+              </Box>
+            }
+          />
+          <FormControlLabel 
+            value="paypal" 
+            control={<Radio />} 
+            label="PayPal" 
+          />
+          <FormControlLabel 
+            value="bkash" 
+            control={<Radio />} 
+            label="bKash" 
+          />
+          <FormControlLabel 
+            value="nagad" 
+            control={<Radio />} 
+            label="Nagad" 
+          />
         </RadioGroup>
 
-        {/* Payment Form Fields - Show appropriate field based on payment method */}
-        <Box sx={{ mt: 2 }}>
-          {paymentMethod === 'card' && (
+        {/* Payment Form Fields */}
+        <Box>          {paymentMethod === 'card' && (
             <TextField
               fullWidth
               label="Card Number"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
-              sx={{ mb: 2 }}
               placeholder="Enter any card number"
-              type="number" 
+              type="number"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
             />
           )}
-          
-          {paymentMethod === 'paypal' && (
+            {paymentMethod === 'paypal' && (
             <TextField
               fullWidth
               label="PayPal Email or Phone"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
-              sx={{ mb: 2 }}
               placeholder="Enter any PayPal email or phone"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
             />
           )}
-          
-          {paymentMethod === 'bkash' && (
+            {paymentMethod === 'bkash' && (
             <TextField
               fullWidth
               label="bKash Number"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
-              sx={{ mb: 2 }}
               placeholder="Enter any bKash number"
               type="number"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
             />
           )}
-          
-          {paymentMethod === 'nagad' && (
+            {paymentMethod === 'nagad' && (
             <TextField
               fullWidth
               label="Nagad Number"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
-              sx={{ mb: 2 }}
               placeholder="Enter any Nagad number"
               type="number"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
+                  '&.Mui-focused': {
+                    background: 'rgba(255,255,255,1)'
+                  }
+                }
+              }}
             />
           )}
-          
-          <Button 
-            variant="contained" 
-            onClick={handlePayment}
-            disabled={processing}
-          >
-            {processing ? 'Processing...' : 'Pay Now'}
-          </Button>
         </Box>
-      </Box>
+      </Paper>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
-        </Box>      ) : cart?.items && cart.items.length > 0 ? (
-        <Grid container spacing={3}>
+        <Box className="glassmorphism" sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          p: 6,
+          borderRadius: 4,
+          animation: 'floating 3s ease-in-out infinite'
+        }}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ ml: 2 }}>
+            Loading your cart...
+          </Typography>
+        </Box>
+      ) : cart?.items && cart.items.length > 0 ? (
+        <Grid container spacing={4}>
           {/* Cart Items */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2, mb: 3 }}>              {cart.items.filter(item => item && item.game).map((item) => {                
-                return (
-                <Box key={item._id}>
-                  <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={8}>            <Paper 
+              elevation={0}
+              className="glassmorphism"
+              sx={{ 
+                p: 4, 
+                borderRadius: 4,
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                animation: 'fadeInUp 0.8s ease-out'
+              }}
+            >
+              <Typography variant="h5" gutterBottom className="gradient-text" sx={{ mb: 3 }}>
+                Your Items ({cart.items.length})
+              </Typography>
+              
+              {cart.items.filter(item => item && item.game).map((item, index) => (
+                <Box key={item._id} sx={{ 
+                  animation: `fadeInUp 0.${8 + index}s ease-out`
+                }}>                  <Grid container spacing={3} alignItems="center" sx={{ 
+                    p: 2,
+                    borderRadius: 3,
+                    background: 'rgba(255,255,255,0.9)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    mb: 2,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: 'rgba(255,255,255,1)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
+                    }
+                  }}>
                     <Grid item xs={3} sm={2}>
                       <CardMedia
                         component="img"
-                        image={(item.game.images && item.game.images[0]) || 'https://via.placeholder.com/300x200?text=Game+Image'}
+                        image={(item.game.images && item.game.images[0]) || '/api/placeholder/150/100'}
                         alt={item.game.title || 'Game Image'}
-                        sx={{ borderRadius: 1 }}
+                        sx={{ 
+                          borderRadius: 2,
+                          width: '100%',
+                          height: 80,
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease',
+                          '&:hover': {
+                            transform: 'scale(1.05)'
+                          }
+                        }}
                       />
                     </Grid>
                     <Grid item xs={9} sm={4}>
-                      <Typography variant="subtitle1" component={Link} to={`/game/${item.game._id}`} sx={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Typography 
+                        variant="h6" 
+                        component={Link} 
+                        to={`/game/${item.game._id}`} 
+                        sx={{ 
+                          textDecoration: 'none', 
+                          color: 'inherit',
+                          fontWeight: 600,
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                            backgroundClip: 'text',
+                            textFillColor: 'transparent',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                          }
+                        }}
+                      >
                         {item.game.title || 'Unknown Game'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Digital Download
+                        📱 Digital Download
                       </Typography>
                     </Grid>
                     <Grid item xs={6} sm={3}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
                         <IconButton 
                           size="small" 
                           onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
                           disabled={loading}
+                          sx={{
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            '&:hover': {
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              transform: 'scale(1.1)'
+                            }
+                          }}
                         >
                           <Remove fontSize="small" />
-                        </IconButton>
-                        <TextField
+                        </IconButton>                        <TextField
                           value={item.quantity}
                           size="small"
                           type="number"
                           InputProps={{ inputProps: { min: 1, max: 99 } }}
                           onChange={(e) => handleUpdateQuantity(item._id, parseInt(e.target.value) || 1)}
-                          sx={{ width: '60px', mx: 1 }}
+                          sx={{ 
+                            width: '70px',
+                            '& .MuiOutlinedInput-root': {
+                              background: 'rgba(255,255,255,0.9)',
+                              backdropFilter: 'blur(10px)',
+                              textAlign: 'center'
+                            }
+                          }}
                           disabled={loading}
                         />
                         <IconButton 
                           size="small"
                           onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
                           disabled={loading}
+                          sx={{
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            '&:hover': {
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              transform: 'scale(1.1)'
+                            }
+                          }}
                         >
                           <Add fontSize="small" />
                         </IconButton>
                       </Box>
-                    </Grid>                    <Grid item xs={4} sm={2} sx={{ textAlign: 'right' }}>
+                    </Grid>
+                    <Grid item xs={4} sm={2} sx={{ textAlign: 'right' }}>
                       {item.game.discountPrice ? (
-                        <>
+                        <Box>
                           <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
                             ৳{(item.game.price || 0).toFixed(2)}
                           </Typography>
-                          <Typography variant="subtitle1" color="error.main">
+                          <Typography variant="h6" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
                             ৳{(item.game.discountPrice || 0).toFixed(2)}
                           </Typography>
-                        </>
+                        </Box>
                       ) : (
-                        <Typography variant="subtitle1">
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                           ৳{(item.game.price || 0).toFixed(2)}
                         </Typography>
                       )}
@@ -944,21 +1196,39 @@ export default function CartPage() {
                         color="error" 
                         onClick={() => handleRemoveItem(item._id)}
                         disabled={loading}
+                        sx={{
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)'
+                          }
+                        }}
                       >
                         <Delete />
                       </IconButton>
                     </Grid>
                   </Grid>
-                  <Divider sx={{ my: 2 }} />
                 </Box>
-                );
-              })}
+              ))}
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                mt: 4,
+                pt: 3,
+                borderTop: '1px solid rgba(255,255,255,0.1)'
+              }}>
                 <Button 
                   component={Link} 
                   to="/"
                   startIcon={<ShoppingBag />}
+                  variant="outlined"
+                  sx={{
+                    borderColor: 'rgba(255,255,255,0.3)',
+                    '&:hover': {
+                      borderColor: '#1976d2',
+                      backgroundColor: 'rgba(25, 118, 210, 0.1)'
+                    }
+                  }}
                 >
                   Continue Shopping
                 </Button>
@@ -968,19 +1238,35 @@ export default function CartPage() {
                   color="error"
                   onClick={handleClearCart}
                   disabled={loading}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: 'rgba(244, 67, 54, 0.1)'
+                    }
+                  }}
                 >
                   Clear Cart
                 </Button>
               </Box>
-            </Paper>
-
-            {/* Promo Code */}
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Promo Code
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <TextField
+            </Paper>            {/* Promo Code Section */}
+            <Paper 
+              elevation={0}
+              className="glassmorphism"
+              sx={{ 
+                p: 3, 
+                mt: 3,
+                borderRadius: 4,
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.3)'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LocalOffer sx={{ mr: 2, color: '#4caf50' }} />
+                <Typography variant="h6" className="gradient-text">
+                  Promo Code
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>                <TextField
                   label="Enter Code"
                   variant="outlined"
                   size="small"
@@ -988,41 +1274,77 @@ export default function CartPage() {
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
                   disabled={promoApplied}
-                  sx={{ mr: 2 }}
+                  placeholder="Try 'CSE15' for 20% off"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      background: 'rgba(255,255,255,0.9)',
+                      backdropFilter: 'blur(10px)',
+                      '&.Mui-focused': {
+                        background: 'rgba(255,255,255,1)'
+                      }
+                    }
+                  }}
                 />
                 <Button 
                   variant="contained" 
                   onClick={applyPromoCode}
                   disabled={promoApplied || !promoCode}
+                  sx={{
+                    background: 'linear-gradient(45deg, #4caf50, #81c784)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #388e3c, #4caf50)'
+                    }
+                  }}
                 >
                   Apply
                 </Button>
               </Box>
               {promoApplied && (
-                <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-                  Promo code applied: {promoDiscount}% discount
+                <Typography variant="body2" sx={{ 
+                  mt: 2, 
+                  p: 2, 
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(76, 175, 80, 0.3)',
+                  color: '#4caf50'
+                }}>
+                  🎉 Promo code applied: {promoDiscount}% discount saved!
                 </Typography>
               )}
             </Paper>
           </Grid>
 
           {/* Order Summary */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
+          <Grid item xs={12} md={4}>            <Paper 
+              elevation={0}
+              className="glassmorphism"
+              sx={{ 
+                p: 4, 
+                borderRadius: 4,
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                position: 'sticky',
+                top: 20,
+                animation: 'fadeInUp 0.9s ease-out'
+              }}
+            >
+              <Typography variant="h5" gutterBottom className="gradient-text" sx={{ mb: 3 }}>
                 Order Summary
               </Typography>
 
               <List disablePadding>
                 <ListItem sx={{ py: 1, px: 0 }}>
                   <ListItemText primary="Subtotal" />
-                  <Typography variant="body1">৳{subtotal.toFixed(2)}</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    ৳{subtotal.toFixed(2)}
+                  </Typography>
                 </ListItem>
 
                 {promoApplied && (
                   <ListItem sx={{ py: 1, px: 0 }}>
                     <ListItemText primary={`Discount (${promoDiscount}%)`} />
-                    <Typography variant="body1" color="error.main">
+                    <Typography variant="body1" sx={{ color: '#4caf50', fontWeight: 600 }}>
                       -৳{discountAmount.toFixed(2)}
                     </Typography>
                   </ListItem>
@@ -1033,35 +1355,85 @@ export default function CartPage() {
                   <Typography variant="body1">৳{tax.toFixed(2)}</Typography>
                 </ListItem>
 
-                <Divider />
+                <Divider sx={{ my: 2, backgroundColor: 'rgba(255,255,255,0.1)' }} />
 
                 <ListItem sx={{ py: 1, px: 0 }}>
-                  <ListItemText primary="Total" />
-                  <Typography variant="h6">৳{total.toFixed(2)}</Typography>
+                  <ListItemText 
+                    primary={
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        Total
+                      </Typography>
+                    } 
+                  />
+                  <Typography variant="h5" sx={{ 
+                    fontWeight: 'bold',
+                    background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                    backgroundClip: 'text',
+                    textFillColor: 'transparent',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}>
+                    ৳{total.toFixed(2)}
+                  </Typography>
                 </ListItem>
-              </List>              <Button
+              </List>
+
+              <Button
                 variant="contained"
                 fullWidth
                 size="large"
-                sx={{ mt: 3 }}
                 onClick={handlePayment}
                 disabled={processing}
+                sx={{ 
+                  mt: 3,
+                  py: 2,
+                  background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
-                {processing ? 'Processing...' : 'Complete Order'}
+                {processing ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress size={24} color="inherit" />
+                    Processing...
+                  </Box>
+                ) : (
+                  'Complete Order'
+                )}
               </Button>
 
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                By proceeding, you agree to our Terms of Service and Privacy Policy.
+              <Typography variant="body2" color="text.secondary" sx={{ 
+                mt: 2, 
+                textAlign: 'center',
+                p: 2,
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderRadius: 2,
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                🔒 By proceeding, you agree to our Terms of Service and Privacy Policy.
               </Typography>
             </Paper>
           </Grid>
         </Grid>
       ) : (
-        <Box sx={{ textAlign: 'center', py: 5 }}>
-          <Typography variant="h5" gutterBottom>
+        <Box className="glassmorphism" sx={{ 
+          textAlign: 'center', 
+          p: 8,
+          borderRadius: 4,
+          background: 'rgba(255,255,255,0.05))',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          animation: 'fadeInUp 0.8s ease-out'
+        }}>
+          <ShoppingCart sx={{ fontSize: 120, color: '#1976d2', mb: 3, opacity: 0.7 }} />
+          <Typography variant="h4" gutterBottom className="gradient-text">
             Your cart is empty
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
             Looks like you haven't added any games to your cart yet
           </Typography>
           <Button 
@@ -1069,6 +1441,16 @@ export default function CartPage() {
             component={Link} 
             to="/"
             startIcon={<ShoppingBag />}
+            size="large"
+            sx={{
+              background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
           >
             Start Shopping
           </Button>
@@ -1079,31 +1461,55 @@ export default function CartPage() {
       <Dialog
         open={paymentSuccessDialog}
         onClose={() => setPaymentSuccessDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }
+        }}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <CheckCircle color="success" sx={{ mr: 1 }} />
-            Payment Successful
+            <CheckCircle sx={{ color: '#4caf50', mr: 2, fontSize: 32 }} />
+            <Typography variant="h5" className="gradient-text">
+              Payment Successful! 🎉
+            </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" gutterBottom>
+          <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
             Your payment has been processed successfully. Your order ID is <strong>{orderId}</strong>.
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            You can download your receipt by clicking the button below.
+            You can download your receipt by clicking the button below. Thank you for shopping with GameBazaar!
           </Typography>
         </DialogContent>
-        <DialogActions>          <Button
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
             variant="contained"
             startIcon={<Download />}
             onClick={() => generatePDF(orderId)}
+            sx={{
+              background: 'linear-gradient(45deg, #4caf50, #81c784)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #388e3c, #4caf50)'
+              }
+            }}
           >
             Download Receipt
           </Button>
           <Button
             variant="outlined"
             onClick={() => setPaymentSuccessDialog(false)}
+            sx={{
+              borderColor: 'rgba(255,255,255,0.3)',
+              '&:hover': {
+                borderColor: '#1976d2',
+                backgroundColor: 'rgba(25, 118, 210, 0.1)'
+              }
+            }}
           >
             Close
           </Button>
@@ -1111,4 +1517,6 @@ export default function CartPage() {
       </Dialog>
     </Container>
   );
+
+  // ...existing helper functions...
 }

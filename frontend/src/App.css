@@ -1,4 +1,3 @@
-
 /* Global Styles */
 * {
   box-sizing: border-box;
@@ -7,52 +6,559 @@
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  position: relative;
 }
 
 .main-content {
   flex: 1;
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   margin-bottom: 1rem;
+  font-weight: 700;
+  color: #2c3e50; /* Default dark color for better contrast */
+}
+
+/* Gradient text utility class for specific use cases */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Light text for dark backgrounds */
+.light-text {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Dark text for light backgrounds */
+.dark-text {
+  color: #2c3e50 !important;
 }
 
 /* Buttons */
 button {
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:hover {
+  transform: translateY(-2px);
 }
 
 /* Links */
 a {
   text-decoration: none;
   color: inherit;
+  transition: color 0.3s ease;
 }
 
 /* Game Cards */
 .game-card {
-  transition: transform 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .game-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    0 10px 20px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Glassmorphism effect for containers */
+.glass-container {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Enhanced glassmorphism with better text contrast */
+.glassmorphism {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark glassmorphism for light text */
+.glassmorphism-dark {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Animated gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Floating animation */
+.floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+@keyframes floating {
+  0% { transform: translate(0, 0px); }
+  50% { transform: translate(0, -10px); }
+  100% { transform: translate(0, 0px); }
+}
+
+/* Pulse animation */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Shimmer effect */
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Active button glow animation */
+@keyframes activeGlow {
+  0%, 100% { 
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3);
+    transform: translateY(-2px) scale(1);
+  }
+  50% { 
+    box-shadow: 0 12px 35px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.5);
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+/* Hot deals active animation */
+@keyframes hotDealsGlow {
+  0%, 100% { 
+    box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4), 0 0 20px rgba(255, 71, 87, 0.3);
+    transform: translateY(-2px) scale(1);
+  }
+  50% { 
+    box-shadow: 0 12px 35px rgba(255, 71, 87, 0.6), 0 0 30px rgba(255, 71, 87, 0.5);
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+/* Neon glow effect */
+.neon-glow {
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 15px currentColor,
+    0 0 20px currentColor;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 10px;
+  }
+  
+  .game-card:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .main-content {
     padding: 10px;
+  }
+}
+
+/* Enhanced text contrast utilities */
+.high-contrast-text {
+  color: #2c3e50 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.white-text-with-shadow {
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-weight: 600;
+}
+
+/* Menu and navigation text visibility fixes */
+.nav-text {
+  color: #2c3e50 !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.nav-text:hover {
+  color: #667eea !important;
+  text-shadow: 0 1px 2px rgba(102, 126, 234, 0.3);
+}
+
+/* Button text visibility improvements */
+.btn-text-visible {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+}
+
+/* Card title visibility on light backgrounds */
+.card-title {
+  color: #2c3e50 !important;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Category and filter text visibility */
+.filter-text {
+  color: #2c3e50 !important;
+  font-weight: 500;
+}
+
+/* Search placeholder visibility */
+.search-input::placeholder {
+  color: rgba(44, 62, 80, 0.6) !important;
+  font-weight: 500;
+}
+
+/* Dropdown and menu items */
+.menu-item-text {
+  color: #2c3e50 !important;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.menu-item-text:hover {
+  color: #667eea !important;
+}
+
+/* Price text visibility */
+.price-text {
+  color: #2c3e50 !important;
+  font-weight: 700;
+}
+
+.discount-price {
+  color: #e74c3c !important;
+  font-weight: 700;
+}
+
+.original-price {
+  color: #7f8c8d !important;
+  text-decoration: line-through;
+}
+
+/* Form field labels and input text enhancement */
+.MuiFormLabel-root {
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+}
+
+.MuiInputBase-input {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiInputBase-input::placeholder {
+  color: rgba(44, 62, 80, 0.6) !important;
+  font-weight: 400 !important;
+}
+
+/* Enhanced glassmorphism with better text contrast */
+.glassmorphism-enhanced {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  color: #2c3e50 !important;
+}
+
+/* Dialog and modal text enhancement */
+.MuiDialog-paper {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.MuiDialogTitle-root {
+  color: #2c3e50 !important;
+  font-weight: 700 !important;
+}
+
+.MuiDialogContent-root {
+  color: #2c3e50 !important;
+}
+
+/* Table and list text visibility */
+.MuiTableCell-root {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiListItemText-primary {
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+}
+
+.MuiListItemText-secondary {
+  color: #5a6c7d !important;
+  font-weight: 500 !important;
+}
+
+/* Chip and badge text enhancement */
+.MuiChip-label {
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+}
+
+.MuiChip-colorPrimary .MuiChip-label {
+  color: #ffffff !important;
+}
+
+.MuiChip-colorSecondary .MuiChip-label {
+  color: #ffffff !important;
+}
+
+/* Alert and notification text */
+.MuiAlert-message {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+/* Card content text enhancement */
+.MuiCardContent-root {
+  color: #2c3e50 !important;
+}
+
+.MuiCardHeader-title {
+  color: #2c3e50 !important;
+  font-weight: 700 !important;
+}
+
+.MuiCardHeader-subheader {
+  color: #5a6c7d !important;
+  font-weight: 500 !important;
+}
+
+/* Paper and container text */
+.MuiPaper-root {
+  color: #2c3e50 !important;
+}
+
+/* Tab text enhancement */
+.MuiTab-root {
+  color: #5a6c7d !important;
+  font-weight: 600 !important;
+}
+
+.MuiTab-root.Mui-selected {
+  color: #667eea !important;
+  font-weight: 700 !important;
+}
+
+/* Typography variants enhancement */
+.MuiTypography-h1, .MuiTypography-h2, .MuiTypography-h3, 
+.MuiTypography-h4, .MuiTypography-h5, .MuiTypography-h6 {
+  color: #2c3e50 !important;
+  font-weight: 700 !important;
+}
+
+.MuiTypography-body1, .MuiTypography-body2 {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiTypography-caption {
+  color: #5a6c7d !important;
+  font-weight: 500 !important;
+}
+
+/* Button text enhancement based on variants */
+.MuiButton-contained {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.MuiButton-outlined {
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+}
+
+.MuiButton-text {
+  color: #667eea !important;
+  font-weight: 600 !important;
+}
+
+/* Menu and dropdown text */
+.MuiMenuItem-root {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiSelect-select {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+/* Tooltip text */
+.MuiTooltip-tooltip {
+  background-color: rgba(44, 62, 80, 0.95) !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Stepper text */
+.MuiStepLabel-label {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiStepLabel-label.Mui-active {
+  color: #667eea !important;
+  font-weight: 600 !important;
+}
+
+/* Breadcrumb text */
+.MuiBreadcrumbs-ol {
+  color: #2c3e50 !important;
+}
+
+.MuiBreadcrumbs-separator {
+  color: #5a6c7d !important;
+}
+
+/* Accordion text */
+.MuiAccordionSummary-content {
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+}
+
+.MuiAccordionDetails-root {
+  color: #2c3e50 !important;
+}
+
+/* Pagination text */
+.MuiPaginationItem-root {
+  color: #2c3e50 !important;
+  font-weight: 500 !important;
+}
+
+.MuiPaginationItem-root.Mui-selected {
+  background-color: #667eea !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* AppBar text override */
+.MuiAppBar-root {
+  color: #2c3e50 !important;
+}
+
+.MuiToolbar-root {
+  color: #2c3e50 !important;
+}
+
+/* Special class for maintaining gradient text where needed */
+.preserve-gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Special class for maintaining white text on dark backgrounds */
+.preserve-white-text {
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Enhanced contrast for specific components */
+.enhanced-contrast {
+  color: #2c3e50 !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Override for dark mode if needed */
+@media (prefers-color-scheme: dark) {
+  .auto-contrast-text {
+    color: rgba(255, 255, 255, 0.95) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   }
 }

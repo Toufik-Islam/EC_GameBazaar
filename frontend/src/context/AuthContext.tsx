@@ -65,9 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Don't log out on network errors to allow offline use
     }
   };
-
   // For development only - use these test accounts if backend auth is not working
-  const TEST_ACCOUNTS = {
+  const TEST_ACCOUNTS: Record<string, { password: string; id: string; username: string; role: 'admin' | 'user' }> = {
     'admin@admin.com': { password: 'admin123', id: '1', username: 'admin', role: 'admin' as const },
     'user1@test.com': { password: 'test123', id: '2', username: 'user1', role: 'user' as const },
     'user2@test.com': { password: 'test123', id: '3', username: 'user2', role: 'user' as const },

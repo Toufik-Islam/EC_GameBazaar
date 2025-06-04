@@ -428,11 +428,10 @@ export default function BlogDetailsPage() {
       </Container>
     );
   }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3, backgroundColor: 'white' }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/blog')}
@@ -520,7 +519,7 @@ export default function BlogDetailsPage() {
             Share
           </Button>
         </Box>
-      </Box>
+      </Paper>
 
       <Grid container spacing={4}>
         {/* Main Content */}

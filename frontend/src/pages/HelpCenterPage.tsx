@@ -8,6 +8,7 @@ import {
   Box, 
   List, 
   ListItem, 
+  ListItemButton,
   ListItemIcon, 
   ListItemText,
   TextField,
@@ -161,12 +162,13 @@ export default function HelpCenterPage() {
               </Box>
               
               <List dense>
-                {category.topics.map((topic, topicIndex) => (
-                  <ListItem button component={Link} to="#" key={topicIndex}>
-                    <ListItemIcon sx={{ minWidth: 30 }}>
-                      <HelpIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    <ListItemText primary={topic} />
+                {category.topics.map((topic, topicIndex) => (                  <ListItem component={Link} to="#" key={topicIndex}>
+                    <ListItemButton>
+                      <ListItemIcon sx={{ minWidth: 30 }}>
+                        <HelpIcon fontSize="small" color="primary" />
+                      </ListItemIcon>
+                      <ListItemText primary={topic} />
+                    </ListItemButton>
                   </ListItem>
                 ))}
               </List>

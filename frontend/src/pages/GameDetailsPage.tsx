@@ -29,7 +29,9 @@ import {
   Stack,
   Modal,
   Backdrop,
-  Fade
+  Fade,
+  Container,
+  Badge
 } from '@mui/material';
 import {
   Favorite,
@@ -51,7 +53,13 @@ import {
   ExpandMore,
   ExpandLess,
   Close,
-  ZoomIn
+  ZoomIn,
+  Star,
+  LocalOffer,
+  Verified,
+  Download,
+  PlayArrow,
+  Gamepad
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -673,610 +681,747 @@ export default function GameDetailsPage() {
   
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ 
+        py: 4, 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        minHeight: '60vh'
+      }}>
+        <Box className="glassmorphism" sx={{ 
+          p: 6, 
+          textAlign: 'center',
+          borderRadius: 4,
+          animation: 'floating 3s ease-in-out infinite'
+        }}>
+          <CircularProgress size={60} sx={{ mb: 2 }} />
+          <Typography variant="h6" className="gradient-text">
+            Loading game details...
+          </Typography>
+        </Box>
+      </Container>
     );
   }
-  
+
   if (error || !game) {
     return (
-      <Box sx={{ textAlign: 'center', py: 5 }}>
-        <Typography variant="h5" color="error" gutterBottom>
-          {error || 'Game not found'}
-        </Typography>
-        <Button variant="contained" href="/" sx={{ mt: 2 }}>
-          Return to Home
-        </Button>
-      </Box>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box className="glassmorphism" sx={{ 
+          p: 6, 
+          textAlign: 'center',
+          borderRadius: 4,
+          border: '1px solid rgba(255,0,0,0.2)'
+        }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            {error || 'Game not found'}
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={() => window.history.back()}
+            sx={{ mt: 2 }}
+          >
+            Go Back
+          </Button>
+        </Box>
+      </Container>
     );
   }
-  
+
+  const discountPercentage = game.discountPrice 
+    ? Math.round(((game.price - game.discountPrice) / game.price) * 100)
+    : 0;
+
   return (
-    <Box>
-      {/* Notification */}
-      <Snackbar 
-        open={notification !== null} 
-        autoHideDuration={6000} 
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        {notification && (
-          <Alert onClose={closeNotification} severity={notification.type}>
-            {notification.message}
-          </Alert>
-        )}
-      </Snackbar>
-      
-      {/* Game Title and Basic Info */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          {game.title}
-        </Typography>
-        
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-          {game.genre && game.genre.map((genre, index) => (
-            <Chip key={index} label={genre} />
-          ))}
-          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={scrollToReviews}>
-            <Rating value={game.averageRating || 0} precision={0.5} readOnly />
-            <Typography variant="body2" sx={{ ml: 1 }}>
-              ({game.numReviews || 0} reviews)
-            </Typography>
-          </Box>
-          {game.releaseDate && (
-            <Typography variant="body2">
-              Release Date: {new Date(game.releaseDate).toLocaleDateString()}
-            </Typography>
-          )}
-          {game.publisher && (
-            <Typography variant="body2">
-              Publisher: {game.publisher}
-            </Typography>
-          )}
-          {game.developer && (
-            <Typography variant="body2">
-              Developer: {game.developer}
-            </Typography>
-          )}
-        </Box>
-      </Box>
-      
-      {/* Game Images and Purchase Info */}
-      <Grid container spacing={4}>
-        {/* Images Section */}
-        <Grid item xs={12} md={8}>          <Box sx={{ mb: 2, position: 'relative' }}>
-            <Box
-              component="img"
-              src={game.images && game.images.length > 0 
-                ? game.images[selectedImage] 
-                : 'https://via.placeholder.com/800x450?text=No+Image+Available'}
-              alt={`${game.title} screenshot`}
-              sx={{
-                width: '100%',
-                height: 'auto',
-                borderRadius: 1,
-                boxShadow: 3,
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'scale(1.02)'
-                }
-              }}
-              onClick={() => handleImageClick(
-                game.images && game.images.length > 0 
-                  ? game.images[selectedImage] 
-                  : 'https://via.placeholder.com/800x450?text=No+Image+Available',
-                `${game.title} - Screenshot ${selectedImage + 1}`
-              )}
-            />
-            {/* Zoom indicator overlay */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                borderRadius: '50%',
-                width: 40,
-                height: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                opacity: 0.7,
-                transition: 'opacity 0.2s',
-                '&:hover': {
-                  opacity: 1
-                }
-              }}
-              onClick={() => handleImageClick(
-                game.images && game.images.length > 0 
-                  ? game.images[selectedImage] 
-                  : 'https://via.placeholder.com/800x450?text=No+Image+Available',
-                `${game.title} - Screenshot ${selectedImage + 1}`
-              )}
-            >
-              <ZoomIn sx={{ color: 'white', fontSize: 20 }} />
-            </Box>
-          </Box>
-            {game.images && game.images.length > 1 && (
-            <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
-              {game.images.map((image, index) => (
+    <Container maxWidth="lg" sx={{ py: 4 }}>      {/* Hero Section */}
+      <Box className="glassmorphism" sx={{ 
+        p: 4, 
+        mb: 4, 
+        borderRadius: 4,
+        background: '#ffffff',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.2)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        animation: 'fadeInUp 0.8s ease-out'
+      }}>
+        <Grid container spacing={4}>
+          {/* Game Images */}
+          <Grid item xs={12} md={6}>
+            <Box sx={{ position: 'relative' }}>
+              {/* Main Image */}
+              <Paper 
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.02)'
+                  }
+                }} 
+                onClick={() => setZoomModal({
+                  open: true,
+                  imageUrl: game.images?.[selectedImage] || '/api/placeholder/600/400',
+                  imageTitle: game.title
+                })}
+              >
                 <Box
-                  key={index}
-                  sx={{ 
-                    position: 'relative',
-                    flexShrink: 0,
-                    '&:hover .zoom-overlay': {
-                      opacity: 1
+                  component="img"
+                  src={game.images?.[selectedImage] || '/api/placeholder/600/400'}
+                  alt={game.title}
+                  sx={{
+                    width: '100%',
+                    height: 400,
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+                <IconButton
+                  sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(0,0,0,0.7)'
                     }
                   }}
                 >
-                  <Box
-                    component="img"
-                    src={image}
-                    alt={`${game.title} thumbnail ${index + 1}`}
-                    sx={{
-                      width: 100,
-                      height: 60,
-                      objectFit: 'cover',
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      border: index === selectedImage ? '2px solid' : 'none',
-                      borderColor: 'primary.main',
-                      transition: 'transform 0.2s',
-                      '&:hover': {
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                    onClick={() => setSelectedImage(index)}
-                  />
-                  <Box
-                    className="zoom-overlay"
+                  <ZoomIn />
+                </IconButton>
+                {game.onSale && (
+                  <Chip
+                    label={`${discountPercentage}% OFF`}
                     sx={{
                       position: 'absolute',
-                      top: 2,
-                      right: 2,
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      borderRadius: '50%',
-                      width: 20,
-                      height: 20,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      opacity: 0,
-                      transition: 'opacity 0.2s'
+                      top: 16,
+                      left: 16,
+                      bgcolor: '#ff4444',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      animation: 'pulse 2s infinite'
                     }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleImageClick(image, `${game.title} - Screenshot ${index + 1}`);
-                    }}
-                  >
-                    <ZoomIn sx={{ color: 'white', fontSize: 12 }} />
-                  </Box>
+                  />
+                )}
+              </Paper>
+
+              {/* Thumbnail Images */}
+              {game.images && game.images.length > 1 && (
+                <Box sx={{ display: 'flex', gap: 1, mt: 2, overflowX: 'auto' }}>
+                  {game.images.map((image, index) => (
+                    <Paper
+                      key={index}
+                      elevation={selectedImage === index ? 8 : 2}
+                      sx={{
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        border: selectedImage === index ? '3px solid #1976d2' : 'none',
+                        minWidth: 80,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.05)'
+                        }
+                      }}
+                      onClick={() => setSelectedImage(index)}
+                    >
+                      <Box
+                        component="img"
+                        src={image}
+                        alt={`${game.title} ${index + 1}`}
+                        sx={{
+                          width: 80,
+                          height: 60,
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </Paper>
+                  ))}
                 </Box>
-              ))}
-            </Box>
-          )}
-        </Grid>
-        
-        {/* Purchase Info Section */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ mb: 3 }}>
-              {game.discountPrice ? (
-                <>
-                  <Typography variant="body1" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                    ৳{game.price.toFixed(2)}
-                  </Typography>
-                  <Typography variant="h4" color="error.main">
-                    ৳{game.discountPrice.toFixed(2)}
-                  </Typography>
-                  <Chip label="Sale" color="error" size="small" sx={{ mt: 1 }} />
-                </>
-              ) : (
-                <Typography variant="h4">
-                  ৳{game.price.toFixed(2)}
-                </Typography>
               )}
             </Box>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Button 
-                variant="contained" 
-                size="large" 
-                startIcon={cartLoading ? <CircularProgress size={20} color="inherit" /> : <ShoppingCart />}
-                fullWidth
-                onClick={handleAddToCart}
-                disabled={cartLoading}
-              >
-                {cartLoading ? 'Adding...' : 'Add to Cart'}
-              </Button>
-              
-              <Button 
-                variant="outlined" 
-                size="large" 
-                startIcon={wishlistLoading ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  isInWishlist(game._id) ? <Favorite /> : <FavoriteBorder />
-                )}
-                onClick={toggleWishlist}
-                disabled={wishlistLoading}
-                fullWidth
-              >
-                {wishlistLoading 
-                  ? 'Processing...' 
-                  : (isInWishlist(game._id) ? 'In Wishlist' : 'Add to Wishlist')
-                }
-              </Button>
-              
-              <Button 
-                variant="outlined" 
-                size="large" 
-                startIcon={<Share />}
-                fullWidth
-              >
-                Share
-              </Button>
-            </Box>
-            
-            <Divider sx={{ my: 3 }} />
-            
-            {/* Download Resources section removed as requested */}
-          </Paper>
-        </Grid>
-      </Grid>
-      
-      {/* Tabs Section */}
-      <Box sx={{ mt: 6 }} ref={reviewsTabRef}>
-        <Paper sx={{ width: '100%' }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            indicatorColor="primary"
-            textColor="primary"
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab label="Description" />
-            <Tab label="System Requirements" />
-            <Tab label="Reviews" />
-            <Tab label="Installation Tutorial" />
-          </Tabs>
-          
-          {/* Description Tab */}
-          <TabPanel value={tabValue} index={0}>
-            <Typography variant="body1" paragraph component="div" sx={{ whiteSpace: 'pre-line' }}>
-              {game.description}
-            </Typography>
-          </TabPanel>
-          
-          {/* System Requirements Tab */}
-          <TabPanel value={tabValue} index={1}>
-            {game.systemRequirements ? (
-              <Typography variant="body1" paragraph component="div" sx={{ whiteSpace: 'pre-line' }}>
-                {game.systemRequirements}
-              </Typography>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                System requirements information is not available for this game.
-              </Typography>
-            )}
-          </TabPanel>
-          
-          {/* Reviews Tab */}
-          <TabPanel value={tabValue} index={2}>
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Customer Reviews
-              </Typography>
-              
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Rating value={game.averageRating || 0} precision={0.5} readOnly size="large" />
-                  <Typography variant="h6" sx={{ ml: 2 }}>
-                    {game.averageRating ? game.averageRating.toFixed(1) : '0'} out of 5
+          </Grid>
+
+          {/* Game Information */}
+          <Grid item xs={12} md={6}>
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Title and Rating */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h3" component="h1" className="gradient-text" gutterBottom sx={{ 
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                  backgroundClip: 'text',
+                  textFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  {game.title}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Rating 
+                    value={game.averageRating || 0} 
+                    readOnly 
+                    precision={0.1}
+                    sx={{ 
+                      '& .MuiRating-iconFilled': {
+                        color: '#ffd700'
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    ({game.numReviews || 0} reviews)
                   </Typography>
+                  {game.featured && (
+                    <Chip
+                      icon={<Star />}
+                      label="Featured"
+                      size="small"
+                      sx={{
+                        bgcolor: 'gold',
+                        color: 'black',
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  )}
+                </Box>
+              </Box>
+
+              {/* Price Section */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  {game.discountPrice ? (
+                    <>
+                      <Typography variant="h4" sx={{ 
+                        fontWeight: 'bold',
+                        color: '#4caf50'
+                      }}>
+                        ৳{game.discountPrice}
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        textDecoration: 'line-through',
+                        color: 'text.secondary'
+                      }}>
+                        ৳{game.price}
+                      </Typography>
+                      <Chip
+                        label={`Save ${discountPercentage}%`}
+                        size="small"
+                        sx={{
+                          bgcolor: '#ff4444',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 'bold',
+                      color: '#1976d2'
+                    }}>
+                      ৳{game.price}
+                    </Typography>
+                  )}
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Based on {game.numReviews || 0} reviews
+                  Free shipping • Digital download
                 </Typography>
               </Box>
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              {/* Review List */}
-              {reviews.length > 0 ? (
+
+              {/* Game Details */}
+              <Box sx={{ mb: 3 }}>
+                <Grid container spacing={2}>
+                  {game.genre && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Genres</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {game.genre.map((g, index) => (
+                          <Chip
+                            key={index}
+                            label={g}
+                            size="small"
+                            sx={{
+                              background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                              color: 'white',
+                              '&:hover': {
+                                background: 'linear-gradient(45deg, #1565c0, #1976d2)'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  )}
+                  {game.platform && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Platforms</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {game.platform.map((p, index) => (
+                          <Chip
+                            key={index}
+                            label={p}
+                            size="small"
+                            icon={<Computer />}
+                            variant="outlined"
+                            sx={{
+                              borderColor: '#1976d2',
+                              color: '#1976d2',
+                              '&:hover': {
+                                bgcolor: 'rgba(25, 118, 210, 0.1)'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  )}
+                  {game.developer && (
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">Developer</Typography>
+                      <Typography variant="body2">{game.developer}</Typography>
+                    </Grid>
+                  )}
+                  {game.publisher && (
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">Publisher</Typography>
+                      <Typography variant="body2">{game.publisher}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+
+              {/* Action Buttons */}
+              <Box sx={{ mt: 'auto' }}>
+                <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<ShoppingCart />}
+                    onClick={handleAddToCart}
+                    disabled={cartLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #1565c0, #1976d2)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Add to Cart
+                  </Button>
+                  <IconButton
+                    onClick={toggleWishlist}
+                    disabled={wishlistLoading}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        transform: 'scale(1.1)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {isInWishlist(game._id) ? (
+                      <Favorite sx={{ color: '#ff4444' }} />
+                    ) : (
+                      <FavoriteBorder />
+                    )}
+                  </IconButton>
+                </Stack>
+
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Share />}
+                    sx={{ flex: 1 }}
+                  >
+                    Share
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Download />}
+                    sx={{ flex: 1 }}
+                  >
+                    Download
+                  </Button>
+                </Stack>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>      {/* Tabs Section */}
+      <Paper 
+        elevation={0}
+        className="glassmorphism"
+        sx={{ 
+          borderRadius: 4,
+          background: '#ffffff',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          overflow: 'hidden'
+        }}
+      >
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 600,
+              '&.Mui-selected': {
+                background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }
+            },
+            '& .MuiTabs-indicator': {
+              background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+              height: 3
+            }
+          }}
+        >
+          <Tab label="Description" />
+          <Tab label="System Requirements" />
+          <Tab label="Reviews" />
+          <Tab label="Installation Guide" />
+        </Tabs>
+
+        <TabPanel value={tabValue} index={0}>
+          <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
+            {game.description}
+          </Typography>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
+          {game.systemRequirements ? (
+            <Box>
+              <Typography variant="h6" gutterBottom className="gradient-text">
+                System Requirements
+              </Typography>
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>
+                {game.systemRequirements}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="body1" color="text.secondary">
+              System requirements not available for this game.
+            </Typography>
+          )}
+        </TabPanel>        <TabPanel value={tabValue} index={2}>
+          <Box ref={reviewsTabRef}>
+            <Typography variant="h6" gutterBottom className="gradient-text">
+              Customer Reviews ({reviews.length})
+            </Typography>
+            
+            {/* Review Summary */}
+            {game.averageRating && game.numReviews && game.numReviews > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    {game.averageRating.toFixed(1)}
+                  </Typography>
+                  <Rating 
+                    value={game.averageRating} 
+                    readOnly 
+                    precision={0.1}
+                    sx={{ '& .MuiRating-iconFilled': { color: '#ffd700' } }}
+                  />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Based on {game.numReviews} review{game.numReviews !== 1 ? 's' : ''}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Add Review Form */}
+            {user ? (
+              <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Write a Review
+                </Typography>
+                <form onSubmit={isEditing ? handleUpdateReview : handleSubmitReview}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography component="legend" gutterBottom>
+                      Rating *
+                    </Typography>
+                    <Rating
+                      value={isEditing ? editReviewRating : reviewRating}
+                      onChange={(event, newValue) => {
+                        if (isEditing) {
+                          setEditReviewRating(newValue);
+                        } else {
+                          setReviewRating(newValue);
+                        }
+                      }}
+                      size="large"
+                      sx={{ '& .MuiRating-iconFilled': { color: '#ffd700' } }}
+                    />
+                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Share your experience with this game..."
+                    value={isEditing ? editReviewText : reviewText}
+                    onChange={(e) => {
+                      if (isEditing) {
+                        setEditReviewText(e.target.value);
+                      } else {
+                        setReviewText(e.target.value);
+                      }
+                    }}
+                    sx={{ mb: 2 }}
+                    required
+                  />
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={(!reviewRating && !isEditing) || (!editReviewRating && isEditing)}
+                      sx={{
+                        background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                        '&:hover': { background: 'linear-gradient(45deg, #1565c0, #1976d2)' }
+                      }}
+                    >
+                      {isEditing ? 'Update Review' : 'Submit Review'}
+                    </Button>
+                    {isEditing && (
+                      <Button
+                        variant="outlined"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </Box>
+                </form>
+              </Paper>
+            ) : (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Please log in to write a review
+              </Alert>
+            )}            {/* Reviews List */}
+            <Box>
+              {reviews.length === 0 ? (
+                <Paper elevation={0} sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No reviews yet. Be the first to review this game!
+                  </Typography>
+                </Paper>
+              ) : (
                 reviews.map((review) => (
-                  <Card key={review._id} sx={{ mb: 3 }}>
+                  <Card key={review._id} elevation={0} sx={{ mb: 3, border: '1px solid rgba(0,0,0,0.1)' }}>
                     <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ display: 'flex' }}>
-                          <Avatar src={review.user.avatar} alt={review.user.name} />
-                          <Box sx={{ ml: 2 }}>
-                            <Typography variant="subtitle1">{review.user.name}</Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Rating value={review.rating} precision={0.5} size="small" readOnly />
-                              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      {/* Review Header */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar src={review.user.avatar}>
+                            {review.user.name[0]}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              {review.user.name}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Rating 
+                                value={review.rating} 
+                                readOnly 
+                                size="small"
+                                sx={{ '& .MuiRating-iconFilled': { color: '#ffd700' } }}
+                              />
+                              <Typography variant="caption" color="text.secondary">
                                 {formatDate(review.createdAt)}
                               </Typography>
                             </Box>
                           </Box>
                         </Box>
                         
-                        {/* Review Options Menu - only for the review owner or admin */}
-                        {user && (user.id === review.user._id || user.role === 'admin') && (
-                          <>
-                            <IconButton size="small" onClick={(e) => handleOpenMenu(e, review._id)}>
-                              <MoreVert />
-                            </IconButton>
-                            <Menu
-                              anchorEl={menuAnchorEl}
-                              open={Boolean(menuAnchorEl) && currentReviewId === review._id}
-                              onClose={handleCloseMenu}
-                            >
-                              <MenuItem onClick={handleStartEditReview}>
-                                <Edit fontSize="small" sx={{ mr: 1 }} /> Edit
-                              </MenuItem>
-                              <MenuItem onClick={() => handleDeleteReview(review._id)}>
-                                <Delete fontSize="small" sx={{ mr: 1 }} /> Delete
-                              </MenuItem>
-                            </Menu>
-                          </>
+                        {/* Review Options Menu */}
+                        {user && user.id === review.user._id && (
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleOpenMenu(e, review._id)}
+                          >
+                            <MoreVert />
+                          </IconButton>
                         )}
                       </Box>
-                      
+
                       {/* Review Content */}
-                      {isEditing && editReviewId === review._id ? (
-                        <Box component="form" onSubmit={handleUpdateReview} sx={{ mt: 2 }}>
-                          <Box sx={{ mb: 2 }}>
-                            <Typography component="legend">Your Rating</Typography>
-                            <Rating
-                              name="edit-review-rating"
-                              value={editReviewRating}
-                              onChange={(event, newValue) => {
-                                setEditReviewRating(newValue);
-                              }}
-                              precision={0.5}
-                            />
-                          </Box>
+                      <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        {review.comment}
+                      </Typography>
+
+                      {/* Review Actions */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Button
+                          size="small"
+                          startIcon={hasUserLikedReview(review.likes) ? <ThumbUp /> : <ThumbUpOutlined />}
+                          onClick={() => handleLikeReview(review._id)}
+                          disabled={!user}
+                          color={hasUserLikedReview(review.likes) ? 'primary' : 'inherit'}
+                        >
+                          {review.likes.length} {review.likes.length === 1 ? 'Like' : 'Likes'}
+                        </Button>
+                        
+                        <Button
+                          size="small"
+                          startIcon={<Reply />}
+                          onClick={() => toggleReplyForm(review._id)}
+                          disabled={!user}
+                        >
+                          Reply
+                        </Button>
+                        
+                        {review.replies.length > 0 && (
+                          <Button
+                            size="small"
+                            startIcon={expandedReplies[review._id] ? <ExpandLess /> : <ExpandMore />}
+                            onClick={() => toggleReplies(review._id)}
+                          >
+                            {review.replies.length} {review.replies.length === 1 ? 'Reply' : 'Replies'}
+                          </Button>
+                        )}
+                      </Box>
+
+                      {/* Reply Form */}
+                      {replyingTo === review._id && (
+                        <Box sx={{ mb: 2, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1 }}>
                           <TextField
-                            label="Your Review"
-                            multiline
-                            rows={4}
                             fullWidth
-                            value={editReviewText}
-                            onChange={(e) => setEditReviewText(e.target.value)}
-                            sx={{ mb: 2 }}
+                            multiline
+                            rows={2}
+                            placeholder="Write your reply..."
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            sx={{ mb: 1 }}
                           />
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button 
-                              type="submit" 
+                            <Button
+                              size="small"
                               variant="contained"
-                              disabled={!editReviewRating || !editReviewText.trim()}
+                              onClick={() => handleSubmitReply(review._id)}
+                              disabled={!replyText.trim()}
                             >
-                              Update Review
+                              <Send sx={{ mr: 1 }} />
+                              Reply
                             </Button>
-                            <Button 
-                              variant="outlined"
-                              onClick={handleCancelEdit}
+                            <Button
+                              size="small"
+                              onClick={() => toggleReplyForm(null)}
                             >
                               Cancel
                             </Button>
                           </Box>
                         </Box>
-                      ) : (
-                        <Typography variant="body1" paragraph>
-                          {review.comment}
-                        </Typography>
                       )}
-                      
-                      {/* Like and Reply buttons */}
-                      {!isEditing && (
-                        <CardActions sx={{ pt: 0, pb: 1 }}>
-                          <Button 
-                            startIcon={hasUserLikedReview(review.likes) ? <ThumbUp /> : <ThumbUpOutlined />}
-                            onClick={() => handleLikeReview(review._id)}
-                            size="small"
-                          >
-                            {review.likes.length > 0 ? review.likes.length : ''} Like
-                          </Button>
-                          <Button 
-                            startIcon={<Reply />}
-                            onClick={() => toggleReplyForm(review._id)}
-                            size="small"
-                          >
-                            Reply
-                          </Button>
-                          {review.replies.length > 0 && (
-                            <Button
-                              onClick={() => toggleReplies(review._id)}
-                              endIcon={expandedReplies[review._id] ? <ExpandLess /> : <ExpandMore />}
-                              size="small"
-                            >
-                              {review.replies.length} {review.replies.length === 1 ? 'Reply' : 'Replies'}
-                            </Button>
-                          )}
-                        </CardActions>
-                      )}
-                      
-                      {/* Reply Form */}
-                      {replyingTo === review._id && (
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                          <TextField
-                            placeholder="Write a reply..."
-                            size="small"
-                            fullWidth
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                          />
-                          <Button 
-                            variant="contained" 
-                            onClick={() => handleSubmitReply(review._id)}
-                            disabled={!replyText.trim()}
-                          >
-                            <Send />
-                          </Button>
-                        </Box>
-                      )}
-                      
+
                       {/* Replies */}
-                      {review.replies.length > 0 && (
-                        <Collapse in={expandedReplies[review._id]} timeout="auto" unmountOnExit>
-                          <Box sx={{ mt: 2, pl: 2, borderLeft: '1px solid', borderColor: 'divider' }}>
-                            {review.replies.map((reply) => (
-                              <Box key={reply._id} sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Box sx={{ display: 'flex', mb: 1 }}>
-                                    <Avatar src={reply.user.avatar} alt={reply.user.name} sx={{ width: 32, height: 32 }} />
-                                    <Box sx={{ ml: 1 }}>
-                                      <Typography variant="subtitle2">{reply.user.name}</Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {formatDate(reply.createdAt)}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                  
-                                  {/* Delete Reply Button - only for the reply owner or admin */}
-                                  {user && (user.id === reply.user._id || user.role === 'admin') && (
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={() => handleDeleteReply(review._id, reply._id)}
-                                      sx={{ p: 0.5 }}
-                                    >
-                                      <Delete fontSize="small" />
-                                    </IconButton>
-                                  )}
+                      {expandedReplies[review._id] && review.replies.length > 0 && (
+                        <Box sx={{ pl: 2, borderLeft: '2px solid #e0e0e0' }}>
+                          {review.replies.map((reply) => (
+                            <Box key={reply._id} sx={{ mb: 2, p: 2, bgcolor: 'rgba(0,0,0,0.01)', borderRadius: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Avatar src={reply.user.avatar} sx={{ width: 24, height: 24 }}>
+                                    {reply.user.name[0]}
+                                  </Avatar>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                    {reply.user.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {formatDate(reply.createdAt)}
+                                  </Typography>
                                 </Box>
-                                <Typography variant="body2">{reply.comment}</Typography>
+                                
+                                {user && user.id === reply.user._id && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteReply(review._id, reply._id)}
+                                    color="error"
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                )}
                               </Box>
-                            ))}
-                          </Box>
-                        </Collapse>
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                {reply.comment}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
                       )}
                     </CardContent>
                   </Card>
                 ))
-              ) : (
-                <Typography color="text.secondary">
-                  No reviews yet. Be the first to review this game!
-                </Typography>
-              )}
-              
-              {/* Submit Review Form */}
-              {user && (
-                <Box sx={{ mt: 4 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Write a Review
-                  </Typography>
-                  <form onSubmit={handleSubmitReview}>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography component="legend">Your Rating</Typography>
-                      <Rating
-                        name="review-rating"
-                        value={reviewRating}
-                        onChange={(event, newValue) => {
-                          setReviewRating(newValue);
-                        }}
-                        precision={0.5}
-                      />
-                    </Box>
-                    <TextField
-                      label="Your Review"
-                      multiline
-                      rows={4}
-                      fullWidth
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      sx={{ mb: 2 }}
-                    />
-                    <Button 
-                      type="submit" 
-                      variant="contained"
-                      disabled={!reviewRating || !reviewText.trim()}
-                    >
-                      Submit Review
-                    </Button>
-                  </form>
-                </Box>
-              )}
-              
-              {!user && (
-                <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-                  <Typography variant="body1">
-                    Please <Button href="/login" variant="text" sx={{ mx: 1 }}>login</Button> 
-                    to leave a review.
-                  </Typography>
-                </Box>
               )}
             </Box>
-          </TabPanel>
-          
-          {/* Installation Tutorial Tab */}
-          <TabPanel value={tabValue} index={3}>
-            {game.installationTutorial ? (
-              <Typography variant="body1" paragraph component="div" sx={{ whiteSpace: 'pre-line' }}>
+
+            {/* Review Options Menu */}
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={Boolean(menuAnchorEl)}
+              onClose={handleCloseMenu}
+            >
+              <MenuItem onClick={handleStartEditReview}>
+                <Edit sx={{ mr: 1 }} />
+                Edit Review
+              </MenuItem>
+              <MenuItem 
+                onClick={() => {
+                  if (currentReviewId) {
+                    handleDeleteReview(currentReviewId);
+                  }
+                }}
+                sx={{ color: 'error.main' }}
+              >
+                <Delete sx={{ mr: 1 }} />
+                Delete Review
+              </MenuItem>
+            </Menu>
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          {game.installationTutorial ? (
+            <Box>
+              <Typography variant="h6" gutterBottom className="gradient-text">
+                Installation Guide
+              </Typography>
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>
                 {game.installationTutorial}
               </Typography>
-            ) : (
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Step-by-Step Installation Guide
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 1: Download the Game" 
-                      secondary="After purchase, download the game installer from your account's 'My Games' section."
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 2: Run the Installer" 
-                      secondary="Double-click the downloaded file to start the installation process."
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 3: Choose Installation Location" 
-                      secondary="Select where you want to install the game on your computer."
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 4: Select Components" 
-                      secondary="Choose which components to install (full game, additional content, etc.)."
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 5: Wait for Installation" 
-                      secondary="The installer will copy files to your computer. This may take some time depending on your system."
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Step 6: Launch the Game" 
-                      secondary="Once installation is complete, you can launch the game from your desktop or start menu."
-                    />
-                  </ListItem>
-                </List>
-              </Box>
-            )}
-          </TabPanel>        </Paper>
-      </Box>
-      
-      {/* Zoom Modal */}
+            </Box>
+          ) : (
+            <Typography variant="body1" color="text.secondary">
+              Installation guide not available for this game.
+            </Typography>
+          )}
+        </TabPanel>
+      </Paper>
+
+      {/* Image Zoom Modal */}
       <Modal
         open={zoomModal.open}
-        onClose={handleCloseZoom}
+        onClose={() => setZoomModal({ ...zoomModal, open: false })}
         closeAfterTransition
         BackdropComponent={Backdrop}
         BackdropProps={{
           timeout: 500,
+          sx: { bgcolor: 'rgba(0,0,0,0.8)' }
         }}
       >
         <Fade in={zoomModal.open}>
@@ -1285,62 +1430,58 @@ export default function GameDetailsPage() {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: { xs: '95%', sm: '90%', md: '80%', lg: '70%' },
-            maxWidth: '1200px',
+            maxWidth: '90vw',
             maxHeight: '90vh',
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            borderRadius: 2,
-            overflow: 'hidden',
             outline: 'none'
           }}>
-            {/* Modal Header */}
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 2,
-              borderBottom: '1px solid',
-              borderColor: 'divider'
-            }}>
-              <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
-                {zoomModal.imageTitle}
-              </Typography>
-              <IconButton 
-                onClick={handleCloseZoom}
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': { bgcolor: 'action.hover' }
-                }}
-              >
-                <Close />
-              </IconButton>
-            </Box>
-            
-            {/* Modal Content */}
-            <Box sx={{
-              p: 2,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              maxHeight: 'calc(90vh - 80px)',
-              overflow: 'auto'
-            }}>
-              <Box
-                component="img"
-                src={zoomModal.imageUrl}
-                alt={zoomModal.imageTitle}
-                sx={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  borderRadius: 1
-                }}
-              />
-            </Box>
+            <Box
+              component="img"
+              src={zoomModal.imageUrl}
+              alt={zoomModal.imageTitle}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                borderRadius: 2
+              }}
+            />
+            <IconButton
+              onClick={() => setZoomModal({ ...zoomModal, open: false })}
+              sx={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                bgcolor: 'rgba(0,0,0,0.5)',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: 'rgba(0,0,0,0.7)'
+                }
+              }}
+            >
+              <Close />
+            </IconButton>
           </Box>
         </Fade>
-      </Modal>
-    </Box>
+      </Modal>      {/* Notification Snackbar */}
+      <Snackbar
+        open={!!notification}
+        autoHideDuration={4000}
+        onClose={() => setNotification(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setNotification(null)} 
+          severity={notification?.type || 'info'}
+          sx={{ width: '100%' }}
+          className="high-contrast-text"
+        >
+          {notification?.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
+  // The existing handleAddToCart and toggleWishlist functions are already defined above
+  // We just need to reference them correctly in the JSX
+
+  // ...existing code for reviews and other functionality...
 }

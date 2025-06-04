@@ -305,7 +305,7 @@ export default function BlogPage() {
       </Typography>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, background: '#ffffff' }}>
         <Tabs value={tabValue} onChange={handleTabChange} centered>
           <Tab label="All Blogs" />
           <Tab label="Featured" />

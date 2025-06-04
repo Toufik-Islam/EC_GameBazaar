@@ -31,23 +31,155 @@ import './App.css';
 
 const theme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
-      main: '#5c2d91', // Purple gaming theme
+      main: '#667eea',
+      light: '#8fa7ff',
+      dark: '#3f4fb7',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#ff5722', // Orange for call-to-actions
+      main: '#764ba2',
+      light: '#a679d5',
+      dark: '#4a2171',
+      contrastText: '#ffffff',
+    },
+    error: {
+      main: '#ff4757',
+      light: '#ff6b7a',
+      dark: '#cc0e2d',
+    },
+    warning: {
+      main: '#ffa726',
+      light: '#ffb74d',
+      dark: '#f57c00',
+    },
+    info: {
+      main: '#29b6f6',
+      light: '#4fc3f7',
+      dark: '#0288d1',
+    },
+    success: {
+      main: '#66bb6a',
+      light: '#81c784',
+      dark: '#388e3c',
     },
     background: {
-      default: '#f5f5f5',
+      default: 'transparent',
+      paper: 'rgba(255, 255, 255, 0.95)',
+    },    text: {
+      primary: '#2c3e50',
+      secondary: '#5a6c7d',
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
+    fontFamily: '"Roboto", "Segoe UI", "Helvetica Neue", Arial, sans-serif',    h1: {
       fontWeight: 700,
+      fontSize: '3rem',
+      lineHeight: 1.2,
+      color: '#2c3e50', // Dark color for better contrast
     },
     h2: {
       fontWeight: 600,
+      fontSize: '2.5rem',
+      lineHeight: 1.3,
+      color: '#2c3e50',
+    },
+    h3: {
+      fontWeight: 600,
+      fontSize: '2rem',
+      lineHeight: 1.4,
+    },
+    h4: {
+      fontWeight: 600,
+      fontSize: '1.5rem',
+      lineHeight: 1.4,
+    },
+    body1: {
+      fontSize: '1rem',
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontSize: '0.875rem',
+      lineHeight: 1.6,
+    },
+  },
+  shape: {
+    borderRadius: 16,
+  },
+  shadows: [
+    'none',
+    '0px 2px 8px rgba(0,0,0,0.1)',
+    '0px 4px 16px rgba(0,0,0,0.1)',
+    '0px 8px 24px rgba(0,0,0,0.12)',
+    '0px 12px 32px rgba(0,0,0,0.14)',
+    ...Array(20).fill('0px 16px 40px rgba(0,0,0,0.16)'),
+  ] as any,
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          textTransform: 'none',
+          fontWeight: 600,
+          padding: '10px 24px',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          },
+        },
+        contained: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.6)',
+          },
+        },
+        outlined: {
+          borderWidth: 2,
+          '&:hover': {
+            borderWidth: 2,
+            background: 'rgba(102, 126, 234, 0.04)',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          color: '#2c3e50',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+        },
+      },
     },
   },
 });

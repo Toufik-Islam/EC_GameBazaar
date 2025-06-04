@@ -107,9 +107,8 @@ export default function OrderHistoryPage() {
           console.log('Fetched orders:', data.data);
           
           // Count orders with null games for user awareness
-          let ordersWithNullGames = 0;
-          data.data.forEach(order => {
-            const nullGamesCount = order.orderItems.filter(item => !item.game).length;
+          let ordersWithNullGames = 0;          data.data.forEach((order: any) => {
+            const nullGamesCount = order.orderItems.filter((item: any) => !item.game).length;
             if (nullGamesCount > 0) {
               ordersWithNullGames++;
             }

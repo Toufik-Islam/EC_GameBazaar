@@ -279,6 +279,7 @@ export default function SupportPage() {
         <Alert 
           onClose={handleCloseNotification} 
           severity={notification.severity}
+          className="high-contrast-text"
           sx={{ width: '100%' }}
         >
           {notification.message}

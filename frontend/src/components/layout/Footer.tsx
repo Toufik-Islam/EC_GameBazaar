@@ -4,73 +4,297 @@ import { Link as RouterLink } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    <Box component="footer" sx={{ bgcolor: '#5c2d91', color: 'white', py: 3, mt: 'auto' }}>
-      <Container maxWidth="lg">
+    <Box 
+      component="footer" 
+      sx={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        py: 6,
+        mt: 'auto',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 0,
+        }
+      }}
+    >
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} sm={3}>
-            <Typography variant="h6" gutterBottom>
-              Game Bazaar
+            <Typography 
+              variant="h5" 
+              gutterBottom
+              sx={{ 
+                fontWeight: 700,
+                mb: 3,
+                background: 'linear-gradient(45deg, #fff 30%, #f0f0f0 90%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              🎮 Game Bazaar
             </Typography>
-            <Typography variant="body2">
-              Your one-stop shop for the best games at the best prices.
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3,
+                lineHeight: 1.7,
+                opacity: 0.9
+              }}
+            >
+              Your premium destination for the latest and greatest games. Discover, play, and conquer new worlds with our curated collection.
             </Typography>
-            <Box sx={{ mt: 2, '& > a': { mr: 2, color: 'white' } }}>
-              <Link href="#" sx={{ display: 'inline-block', p: 1 }}>
+            <Box sx={{ 
+              display: 'flex',
+              gap: 2,
+              '& > a': { 
+                color: 'white',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                p: 1.5,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  transform: 'translateY(-3px) scale(1.1)',
+                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                }
+              } 
+            }}>
+              <Link href="#" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Facebook />
               </Link>
-              <Link href="#" sx={{ display: 'inline-block', p: 1 }}>
+              <Link href="#" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Twitter />
               </Link>
-              <Link href="#" sx={{ display: 'inline-block', p: 1 }}>
+              <Link href="#" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Instagram />
               </Link>
-              <Link href="#" sx={{ display: 'inline-block', p: 1 }}>
+              <Link href="#" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <YouTube />
               </Link>
             </Box>
           </Grid>
 
           <Grid item xs={12} sm={3}>
-            <Typography variant="h6" gutterBottom>
-              Popular Categories
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                mb: 3,
+                color: '#fff',
+                position: 'relative',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: -8,
+                  left: 0,
+                  width: 40,
+                  height: 3,
+                  background: 'linear-gradient(90deg, #fff, transparent)',
+                  borderRadius: 2,
+                }
+              }}
+            >
+              🎯 Popular Categories
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', '& > a': { color: 'white', mb: 1 } }}>
-              <Link component={RouterLink} to="/?category=action" sx={{ display: 'inline-block', p: 0.5 }}>Action</Link>
-              <Link component={RouterLink} to="/?category=strategy" sx={{ display: 'inline-block', p: 0.5 }}>Strategy</Link>
-              <Link component={RouterLink} to="/?category=sports" sx={{ display: 'inline-block', p: 0.5 }}>Sports</Link>
-              <Link component={RouterLink} to="/?category=racing" sx={{ display: 'inline-block', p: 0.5 }}>Racing</Link>
-              <Link component={RouterLink} to="/?category=fps" sx={{ display: 'inline-block', p: 0.5 }}>FPS</Link>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 1,
+              '& > a': { 
+                color: 'rgba(255, 255, 255, 0.8)',
+                transition: 'all 0.3s ease',
+                padding: '8px 12px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: -100,
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover': {
+                  color: '#fff',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'translateX(8px)',
+                  '&::before': {
+                    left: '100%',
+                  }
+                }
+              } 
+            }}>
+              <Link component={RouterLink} to="/?category=action">⚔️ Action Games</Link>
+              <Link component={RouterLink} to="/?category=strategy">🧠 Strategy Games</Link>
+              <Link component={RouterLink} to="/?category=sports">⚽ Sports Games</Link>
+              <Link component={RouterLink} to="/?category=racing">🏎️ Racing Games</Link>
+              <Link component={RouterLink} to="/?category=fps">🎯 FPS Games</Link>
             </Box>
           </Grid>
 
           <Grid item xs={12} sm={3}>
-            <Typography variant="h6" gutterBottom>
-              Customer Service
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                mb: 3,
+                color: '#fff',
+                position: 'relative',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: -8,
+                  left: 0,
+                  width: 40,
+                  height: 3,
+                  background: 'linear-gradient(90deg, #fff, transparent)',
+                  borderRadius: 2,
+                }
+              }}
+            >
+              🛟 Customer Service
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', '& > a': { color: 'white', mb: 1 } }}>
-              <Link component={RouterLink} to="/contact" sx={{ display: 'inline-block', p: 0.5 }}>Contact Us</Link>
-              <Link component={RouterLink} to="/faq" sx={{ display: 'inline-block', p: 0.5 }}>FAQ</Link>
-              <Link component={RouterLink} to="/shipping" sx={{ display: 'inline-block', p: 0.5 }}>Shipping Info</Link>
-              <Link component={RouterLink} to="/returns" sx={{ display: 'inline-block', p: 0.5 }}>Returns & Refunds</Link>
-              <Link component={RouterLink} to="/privacy" sx={{ display: 'inline-block', p: 0.5 }}>Privacy Policy</Link>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: 1,
+              '& > a': { 
+                color: 'rgba(255, 255, 255, 0.8)',
+                transition: 'all 0.3s ease',
+                padding: '8px 12px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: -100,
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover': {
+                  color: '#fff',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'translateX(8px)',
+                  '&::before': {
+                    left: '100%',
+                  }
+                }
+              } 
+            }}>
+              <Link component={RouterLink} to="/contact">📧 Contact Us</Link>
+              <Link component={RouterLink} to="/faq">❓ FAQ</Link>
+              <Link component={RouterLink} to="/shipping">🚚 Shipping Info</Link>
+              <Link component={RouterLink} to="/returns">↩️ Returns & Refunds</Link>
+              <Link component={RouterLink} to="/privacy">🔒 Privacy Policy</Link>
             </Box>
           </Grid>
 
           <Grid item xs={12} sm={3}>
-            <Typography variant="h6" gutterBottom>
-              Quick Links
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                mb: 3,
+                color: '#fff',
+                position: 'relative',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: -8,
+                  left: 0,
+                  width: 40,
+                  height: 3,
+                  background: 'linear-gradient(90deg, #fff, transparent)',
+                  borderRadius: 2,
+                }
+              }}
+            >
+              ⚡ Quick Links
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', '& > a': { color: 'white', mb: 1 } }}>
-              <Link component={RouterLink} to="/cart" sx={{ display: 'inline-block', p: 0.5 }}>Shopping Cart</Link>
-              <Link component={RouterLink} to="/support" sx={{ display: 'inline-block', p: 0.5 }}>Support</Link>
-              <Link component={RouterLink} to="/help-center" sx={{ display: 'inline-block', p: 0.5 }}>Help Center</Link>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: 1,
+              '& > a': { 
+                color: 'rgba(255, 255, 255, 0.8)',
+                transition: 'all 0.3s ease',
+                padding: '8px 12px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: -100,
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover': {
+                  color: '#fff',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'translateX(8px)',
+                  '&::before': {
+                    left: '100%',
+                  }
+                }
+              } 
+            }}>
+              <Link component={RouterLink} to="/cart">🛒 Shopping Cart</Link>
+              <Link component={RouterLink} to="/support">💬 Support</Link>
+              <Link component={RouterLink} to="/help-center">🆘 Help Center</Link>
+              <Link component={RouterLink} to="/blog">📝 Blog</Link>
             </Box>
           </Grid>
         </Grid>
 
-        <Typography variant="body2" align="center" sx={{ mt: 3 }}>
-          © {new Date().getFullYear()} Game Bazaar. All rights reserved.
-        </Typography>
+        <Box 
+          sx={{ 
+            mt: 6, 
+            pt: 3, 
+            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+            textAlign: 'center'
+          }}
+        >
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontWeight: 500,
+              background: 'linear-gradient(45deg, rgba(255,255,255,0.8) 30%, rgba(255,255,255,0.6) 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            © {new Date().getFullYear()} GameBazaar. All rights reserved.
+          </Typography>
+        </Box>
       </Container>
     </Box>
   );

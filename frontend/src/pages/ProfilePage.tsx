@@ -14,9 +14,27 @@ import {
   Snackbar,
   Alert,
   InputAdornment,
-  IconButton
+  IconButton,
+  Card,
+  CardContent,
+  Fade,
+  CircularProgress,
+  Chip
 } from '@mui/material';
-import { Person, Edit, Save, Visibility, VisibilityOff } from '@mui/icons-material';
+import { 
+  Person, 
+  Edit, 
+  Save, 
+  Visibility, 
+  VisibilityOff, 
+  AccountCircle, 
+  Email, 
+  Phone, 
+  LocationOn,
+  Security,
+  CalendarToday,
+  Settings
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
 interface TabPanelProps {
@@ -269,303 +287,569 @@ export default function ProfilePage() {
   const closeNotification = () => {
     setNotification(null);
   };
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Notification */}
-      <Snackbar 
-        open={notification !== null} 
-        autoHideDuration={6000} 
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        {notification && (
-          <Alert onClose={closeNotification} severity={notification.type}>
-            {notification.message}
-          </Alert>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        py: 4
+      }}
+    >
+      <Container maxWidth="lg">
+        {/* Notification */}
+        {notification !== null && (
+          <Snackbar 
+            open={true} 
+            autoHideDuration={6000} 
+            onClose={closeNotification}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <Alert onClose={closeNotification} severity={notification.type} className="high-contrast-text">
+              {notification.message}
+            </Alert>
+          </Snackbar>
         )}
-      </Snackbar>
 
-      <Grid container spacing={3}>
-        {/* Profile Header */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center' }}>
-            <Avatar
-              src={userData.avatar}
-              sx={{ width: 100, height: 100, mr: { xs: 0, sm: 3 }, mb: { xs: 2, sm: 0 } }}
-            />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h4" gutterBottom>
-                {userData.firstName} {userData.lastName}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Member since {userData.memberSince}
-              </Typography>
-            </Box>
-            <Button
-              variant={editing ? "outlined" : "contained"}
-              startIcon={editing ? <Save /> : <Edit />}
-              onClick={editing ? handleSave : handleEditToggle}
-              disabled={loading}
-            >
-              {editing ? "Save Changes" : "Edit Profile"}
-            </Button>
-          </Paper>
-        </Grid>
+        <Grid container spacing={3}>
+          {/* Profile Header */}
+          <Grid item xs={12}>
+            <Fade in timeout={600}>
+              <Paper
+                elevation={0}
+                className="glassmorphism-enhanced"
+                sx={{
+                  p: 4,
+                  borderRadius: 4,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'center',
+                  gap: 3
+                }}
+              >
+                <Box sx={{ position: 'relative' }}>
+                  <Avatar
+                    src={userData.avatar}
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      border: '4px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: -5,
+                      right: -5,
+                      backgroundColor: '#4caf50',
+                      borderRadius: '50%',
+                      width: 24,
+                      height: 24,
+                      border: '3px solid white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '10px' }}>
+                      ✓
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Box sx={{ flexGrow: 1, textAlign: { xs: 'center', sm: 'left' } }}>                  <Typography 
+                    variant="h3" 
+                    gutterBottom 
+                    className="high-contrast-text"
+                    sx={{ 
+                      fontWeight: 700,
+                      color: '#2c3e50', // Dark color for better contrast
+                    }}
+                  >
+                    {userData.firstName} {userData.lastName}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, gap: 1, mb: 2 }}>
+                    <CalendarToday sx={{ fontSize: 20, color: '#5a6c7d' }} />
+                    <Typography variant="body1" className="high-contrast-text" sx={{ color: '#5a6c7d' }}>
+                      Member since {userData.memberSince}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    icon={<AccountCircle />}
+                    label="Premium Member"
+                    sx={{
+                      background: 'linear-gradient(45deg, #ff6b6b, #ee5a24)',
+                      color: 'white',
+                      fontWeight: 600
+                    }}
+                  />
+                </Box>
+                
+                <Button
+                  variant={editing ? "outlined" : "contained"}
+                  startIcon={editing ? <Save /> : <Edit />}
+                  onClick={editing ? handleSave : handleEditToggle}
+                  disabled={loading}
+                  size="large"
+                  sx={{
+                    background: editing ? 'transparent' : 'linear-gradient(45deg, #667eea, #764ba2)',
+                    color: editing ? '#667eea' : 'white',
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: 3,
+                    fontWeight: 600,
+                    border: editing ? '2px solid #667eea' : 'none',
+                    '&:hover': {
+                      background: editing ? 'rgba(102, 126, 234, 0.1)' : 'linear-gradient(45deg, #5a6fd8, #6a42a0)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                    }
+                  }}
+                >
+                  {loading ? <CircularProgress size={20} color="inherit" /> : (editing ? "Save Changes" : "Edit Profile")}
+                </Button>
+              </Paper>
+            </Fade>
+          </Grid>
 
-        {/* Profile Tabs */}
-        <Grid item xs={12}>
-          <Paper sx={{ width: '100%' }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              indicatorColor="primary"
-              textColor="primary"
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab label="Personal Information" />
-              <Tab label="Security" />
-              <Tab label="Preferences" />
-            </Tabs>
+          {/* Profile Tabs */}
+          <Grid item xs={12}>
+            <Fade in timeout={800}>
+              <Paper
+                elevation={0}
+                className="glassmorphism-enhanced"
+                sx={{
+                  borderRadius: 4,
+                  overflow: 'hidden'
+                }}
+              >
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    '& .MuiTab-root': {
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      py: 2,
+                      px: 3,
+                      color: '#5a6c7d',
+                      '&.Mui-selected': {
+                        background: 'linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
+                        color: '#667eea'
+                      }
+                    },
+                    '& .MuiTabs-indicator': {
+                      background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                      height: 3,
+                      borderRadius: '2px 2px 0 0'
+                    }
+                  }}
+                >
+                  <Tab icon={<Person />} label="Personal Information" iconPosition="start" />
+                  <Tab icon={<Security />} label="Security" iconPosition="start" />
+                  <Tab icon={<Settings />} label="Preferences" iconPosition="start" />
+                </Tabs>
 
             {/* Personal Information Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    name="firstName"
-                    value={userData.firstName}
-                    onChange={handleInputChange}
-                    disabled={!editing || loading}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    name="lastName"
-                    value={userData.lastName}
-                    onChange={handleInputChange}
-                    disabled={!editing || loading}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    name="email"
-                    value={userData.email}
-                    onChange={handleInputChange}
-                    disabled={true} // Email is always disabled/unchangeable
-                    helperText="Email address cannot be changed"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    name="phone"
-                    value={userData.phone}
-                    onChange={handleInputChange}
-                    disabled={!editing || loading}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Address"
-                    name="address"
-                    value={userData.address}
-                    onChange={handleInputChange}
-                    disabled={!editing || loading}
-                  />
-                </Grid>
-                {editing && (
-                  <Grid item xs={12}>
-                    <Button
-                      variant="contained"
-                      startIcon={<Save />}
-                      onClick={handleSave}
-                      disabled={loading}
-                    >
-                      Save Changes
-                    </Button>
+              <Box sx={{ p: 2 }}>
+                <Typography variant="h5" gutterBottom className="high-contrast-text" sx={{ fontWeight: 600, mb: 3 }}>
+                  Personal Information
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="First Name"
+                      name="firstName"
+                      value={userData.firstName}
+                      onChange={handleInputChange}
+                      disabled={!editing || loading}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <AccountCircle sx={{ color: '#667eea' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: editing ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: editing ? 'rgba(255,255,255,0.25)' : 'transparent'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
                   </Grid>
-                )}
-              </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      name="lastName"
+                      value={userData.lastName}
+                      onChange={handleInputChange}
+                      disabled={!editing || loading}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <AccountCircle sx={{ color: '#667eea' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: editing ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: editing ? 'rgba(255,255,255,0.25)' : 'transparent'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      name="email"
+                      value={userData.email}
+                      disabled
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Email sx={{ color: '#667eea' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      helperText="Email cannot be changed"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: 'transparent',
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: '#5a6c7d',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Phone Number"
+                      name="phone"
+                      value={userData.phone}
+                      onChange={handleInputChange}
+                      disabled={!editing || loading}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Phone sx={{ color: '#667eea' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: editing ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: editing ? 'rgba(255,255,255,0.25)' : 'transparent'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Address"
+                      name="address"
+                      value={userData.address}
+                      onChange={handleInputChange}
+                      disabled={!editing || loading}
+                      multiline
+                      rows={3}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                            <LocationOn sx={{ color: '#667eea' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: editing ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: editing ? 'rgba(255,255,255,0.25)' : 'transparent'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  {editing && (
+                    <Grid item xs={12}>
+                      <Button
+                        variant="contained"
+                        startIcon={<Save />}
+                        onClick={handleSave}
+                        disabled={loading}
+                        size="large"
+                        sx={{
+                          background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                          color: 'white',
+                          px: 4,
+                          py: 1.5,
+                          borderRadius: 3,
+                          fontWeight: 600,
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #5a6fd8, #6a42a0)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                          }
+                        }}
+                      >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : 'Save Changes'}
+                      </Button>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
             </TabPanel>
 
             {/* Security Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Typography variant="h6" gutterBottom>
-                Password Management
-              </Typography>
-              
-              {passwordError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {passwordError}
-                </Alert>
-              )}
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    label="Current Password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            edge="end"
-                          >
-                            {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+              <Box sx={{ p: 2 }}>
+                <Typography variant="h5" gutterBottom className="high-contrast-text" sx={{ fontWeight: 600, mb: 3 }}>
+                  Security Settings
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      label="Current Password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                              edge="end"
+                            >
+                              {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.25)'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type={showNewPassword ? 'text' : 'password'}
+                      label="New Password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              edge="end"
+                            >
+                              {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.25)'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      label="Confirm New Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              edge="end"
+                            >
+                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.25)'
+                          }
+                        },
+                        '& .MuiFormLabel-root': {
+                          color: '#2c3e50',
+                          fontWeight: 600,
+                        },
+                        '& .MuiInputBase-input': {
+                          color: '#2c3e50',
+                          fontWeight: 500,
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handlePasswordChange}
+                      disabled={loading}
+                      sx={{
+                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                        color: 'white',
+                        px: 4,
+                        py: 1.5,
+                        borderRadius: 3,
+                        fontWeight: 600,
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #5a6fd8, #6a42a0)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                        }
+                      }}
+                    >
+                      Update Password
+                    </Button>
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type={showNewPassword ? 'text' : 'password'}
-                    label="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            edge="end"
-                          >
-                            {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    label="Confirm New Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            edge="end"
-                          >
-                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handlePasswordChange}
-                    disabled={loading}
-                  >
-                    Update Password
-                  </Button>
-                </Grid>
-              </Grid>
 
-              <Divider sx={{ my: 3 }} />
+                <Divider sx={{ my: 3 }} />
 
-              <Typography variant="h6" gutterBottom>
-                Two-Factor Authentication
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Two-factor authentication adds an extra layer of security to your account.
-              </Typography>
-              <Button
-                variant="outlined"
-                color="primary"
-              >
-                Enable Two-Factor Authentication
-              </Button>
+                <Typography variant="h6" gutterBottom>
+                  Two-Factor Authentication
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  Two-factor authentication adds an extra layer of security to your account.
+                </Typography>                <Button
+                  variant="outlined"
+                  color="primary"
+                >
+                  Enable Two-Factor Authentication
+                </Button>
+              </Box>
             </TabPanel>
 
-            {/* Preferences Tab */}
-            <TabPanel value={tabValue} index={2}>
-              <Typography variant="h6" gutterBottom>
-                Email Notifications
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Manage what kind of emails you receive from Game Bazaar.
-              </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1">Marketing Emails</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Receive emails about sales, new games, and special offers.
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{ mt: 1 }}
-                    >
-                      Opt Out
-                    </Button>
-                  </Paper>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1">Order Confirmations</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Receive emails when you make a purchase or your order status changes.
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{ mt: 1 }}
-                      disabled
-                    >
-                      Required
-                    </Button>
-                  </Paper>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1">Account Updates</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Receive emails about your account activity and security.
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{ mt: 1 }}
-                      disabled
-                    >
-                      Required
-                    </Button>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </TabPanel>
-          </Paper>
+              {/* Preferences Tab */}
+              <TabPanel value={tabValue} index={2}>
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="h5" gutterBottom className="high-contrast-text" sx={{ fontWeight: 600, mb: 3 }}>
+                    Preferences
+                  </Typography>
+                  
+                  <Typography variant="body1" className="high-contrast-text" sx={{ mb: 2 }}>
+                    Customize your GameBazaar experience to match your preferences.
+                  </Typography>
+                  
+                  <Divider sx={{ my: 2, borderColor: 'rgba(102, 126, 234, 0.2)' }} />
+                  
+                  <Typography variant="body2" className="high-contrast-text" sx={{ fontStyle: 'italic' }}>
+                    More preference options coming soon!
+                  </Typography>
+                </Box>
+              </TabPanel>
+            </Paper>
+          </Fade>
         </Grid>
       </Grid>
-    </Container>
+      </Container>
+    </Box>
   );
 }
