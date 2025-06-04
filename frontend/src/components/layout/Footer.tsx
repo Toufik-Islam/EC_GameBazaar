@@ -292,7 +292,7 @@ export default function Footer() {
               backgroundClip: 'text',
             }}
           >
-            © {new Date().getFullYear()} GameBazaar. All rights reserved.
+            © {new Date().getFullYear()} GameBazaar. All rights reserved. <br/> Contribution: Toufik, Saiful & Tushar
           </Typography>
         </Box>
       </Container>
